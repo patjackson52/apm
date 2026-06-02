@@ -19,6 +19,8 @@ import * as blocker from '../usecases/blocker.js';
 import * as gate from '../usecases/gate.js';
 import * as policy from '../usecases/policy.js';
 import * as prompt from '../usecases/prompt.js';
+import * as next from '../usecases/next.js';
+import * as statusUc from '../usecases/status.js';
 
 export interface ProgramDeps {
   clock?: Clock;
@@ -675,6 +677,46 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .action(function (this: Command, o: { agent?: string; session?: string; mine?: boolean }) {
       process.exitCode = runCommand(buildDeps(), 'lease list', (ctx) => ({
         data: lease.list(ctx, { agent: o.agent, session: o.session, mine: o.mine }),
+      }));
+    });
+
+  // --- next command ---
+  program
+    .command('next')
+    .description('Dispatch the next work item for an agent')
+    .requiredOption('--agent <name>', 'agent name')
+    .option('--session <id>', 'session id (or "current")')
+    .option('--capabilities <csv>', 'comma-separated capability list')
+    .option('--match <mode>', 'capability match mode: any|all (default: any)')
+    .option('--acquire', 'atomically acquire a lease on dispatch')
+    .option('--ttl <duration>', 'lease TTL e.g. 30m (default: 30m)')
+    .action(function (this: Command, o: { agent: string; session?: string; capabilities?: string; match?: string; acquire?: boolean; ttl?: string }) {
+      const caps = o.capabilities ? o.capabilities.split(',').map((s) => s.trim()).filter(Boolean) : [];
+      const args: next.NextArgs = {
+        agent: o.agent,
+        capabilities: caps,
+        match: (o.match === 'all' ? 'all' : 'any') as 'any' | 'all',
+        acquire: o.acquire ?? false,
+        session: o.session,
+        ttl: o.ttl,
+      };
+      let nextResult: next.NextResult | undefined;
+      const rc = runCommand(buildDeps(), 'next', (ctx) => {
+        nextResult = next.next(ctx, args);
+        const stale = nextResult.status === 'dispatched' && nextResult.stale ? { stale: true } : undefined;
+        return { data: nextResult.data, session: nextResult.session, meta: stale };
+      });
+      // rc=0 means render succeeded; override exit code with semantic next code
+      process.exitCode = rc === 0 ? (nextResult ? next.nextExitCode(nextResult) : 0) : rc;
+    });
+
+  // --- status command ---
+  program
+    .command('status')
+    .description('Show project status summary')
+    .action(function (this: Command) {
+      process.exitCode = runCommand(buildDeps(), 'status', (ctx) => ({
+        data: statusUc.status(ctx),
       }));
     });
 

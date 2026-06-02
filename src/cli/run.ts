@@ -16,7 +16,7 @@ export interface RunDeps {
 }
 
 export interface Ctx { storage: Storage; clock: Clock; }
-export interface CmdResult { data: unknown; session?: string; }
+export interface CmdResult { data: unknown; session?: string; meta?: Record<string, unknown>; }
 
 export function resolveFormat(explicit: string | undefined, env: Record<string, string | undefined>, isTty: boolean): OutputFormat {
   const pick = (explicit ?? env.APM_FORMAT ?? (isTty ? 'human' : 'json')) as OutputFormat;
@@ -51,7 +51,9 @@ export function runCommand(deps: RunDeps, command: string, fn: (ctx: Ctx) => Cmd
       : findProjectDb(process.cwd());
     storage = new SqliteStorage(dbPath, clock);
     const result = fn({ storage, clock });
-    out(render(format, ok(result.data, buildMeta(command, clock, result.session))));
+    const meta = buildMeta(command, clock, result.session);
+    if (result.meta) Object.assign(meta, result.meta);
+    out(render(format, ok(result.data, meta)));
     return 0;
   } catch (err) {
     const apm = err instanceof ApmError ? err : new ApmError('E_INTERNAL', String((err as Error)?.message ?? err));

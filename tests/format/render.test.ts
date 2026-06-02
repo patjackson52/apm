@@ -43,4 +43,29 @@ describe('render', () => {
     const s = render('human', fail(new ApmError('E_NOT_FOUND', 'WI-9 not found'), buildMeta('work show', clock)));
     expect(s).toMatch(/error: E_NOT_FOUND WI-9 not found/);
   });
+
+  it('agent projects a next dispatched payload to the plaintext contract', () => {
+    const data = { status: 'dispatched', work_item: 'WI-1', run: 'WR-1', step: { id: 'design', type: 'agent_prompt' },
+      prompt_id: 'design_solution_v1',
+      allowed_action: 'Produce the design artifact.', required_context: [{ id: 'ART-1', version: 2, type: 'spec', title: 'Spec', one_line: 'sync model' }],
+      do_not: ['write implementation code'], when_done: ['apm step complete WR-1 design --artifact-type design --body-file <path> --agent <agent>'],
+      next_actions: [{ cmd: 'apm step complete', args: {} }], lease: null };
+    const s = render('agent', ok(data, buildMeta('next', clock, 'S-1')));
+    expect(s).toMatch(/WORK_ITEM:\s*\n?WI-1/);
+    expect(s).toMatch(/CURRENT_STEP:\s*\n?design/);
+    expect(s).toMatch(/PROMPT:\s*\n?design_solution_v1/);
+    expect(s).toMatch(/ALLOWED_ACTION:/);
+    expect(s).toMatch(/ART-1@2/);
+    expect(s).toMatch(/DO_NOT:/);
+    expect(s).toMatch(/WHEN_DONE:/);
+    expect(s).toMatch(/apm step complete WR-1 design/);
+    expect(s).not.toContain('next_actions'); // json-only
+    expect(s).not.toContain('2026-06-02'); // no volatile timestamps in the agent body
+  });
+
+  it('agent renders a terse idle line', () => {
+    const s = render('agent', ok({ status: 'idle', reason: 'all_leased', retry_after: 30 }, buildMeta('next', clock)));
+    expect(s.trim()).toMatch(/^status=idle reason=all_leased/);
+    expect(s).not.toMatch(/WORK_ITEM/);
+  });
 });

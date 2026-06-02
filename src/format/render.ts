@@ -40,13 +40,80 @@ function renderHuman(env: Envelope<any>): string {
   return String(d);
 }
 
-export function render(format: OutputFormat, envelope: Envelope<any>): string {
-  if (format === 'human') return renderHuman(envelope);
-  if (format === 'yaml') return toYaml(envelope);
-  if (format === 'agent') {
-    // Plan 2 commands have no agent projection; fall back to json with a note.
+function renderAgent(envelope: Envelope<any>): string {
+  const d = envelope.data;
+  if (!d) {
+    // error envelope — fallback
     const withNote = { ...envelope, meta: { ...envelope.meta, note: 'agent format not applicable; emitted json' } };
     return JSON.stringify(withNote, null, 2);
   }
+
+  // idle
+  if (d.status === 'idle') {
+    return `status=idle reason=${d.reason} retry_after=${d.retry_after}`;
+  }
+
+  // drained
+  if (d.status === 'drained') {
+    return 'status=drained';
+  }
+
+  // dispatched next payload (has work_item + step)
+  if (d.work_item && d.step) {
+    const lines: string[] = [];
+
+    lines.push('WORK_ITEM:');
+    lines.push(d.work_item);
+
+    lines.push('');
+    lines.push('CURRENT_STEP:');
+    lines.push(`${d.step.id} (${d.step.type})`);
+
+    if (d.prompt_id != null) {
+      lines.push('');
+      lines.push('PROMPT:');
+      lines.push(d.prompt_id);
+    }
+
+    lines.push('');
+    lines.push('ALLOWED_ACTION:');
+    lines.push(d.allowed_action ?? '');
+
+    if (Array.isArray(d.required_context) && d.required_context.length > 0) {
+      lines.push('');
+      lines.push('REQUIRED_CONTEXT:');
+      for (const ctx of d.required_context) {
+        lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" — ${ctx.one_line}`);
+      }
+    }
+
+    if (Array.isArray(d.do_not) && d.do_not.length > 0) {
+      lines.push('');
+      lines.push('DO_NOT:');
+      for (const item of d.do_not) {
+        lines.push(`- ${item}`);
+      }
+    }
+
+    if (Array.isArray(d.when_done) && d.when_done.length > 0) {
+      lines.push('');
+      lines.push('WHEN_DONE:');
+      for (const item of d.when_done) {
+        lines.push(item);
+      }
+    }
+
+    return lines.join('\n');
+  }
+
+  // non-next command — fallback to json with note
+  const withNote = { ...envelope, meta: { ...envelope.meta, note: 'agent format not applicable; emitted json' } };
+  return JSON.stringify(withNote, null, 2);
+}
+
+export function render(format: OutputFormat, envelope: Envelope<any>): string {
+  if (format === 'human') return renderHuman(envelope);
+  if (format === 'yaml') return toYaml(envelope);
+  if (format === 'agent') return renderAgent(envelope);
   return JSON.stringify(envelope, null, 2);
 }
