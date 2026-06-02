@@ -1,5 +1,5 @@
 import type {
-  WorkItemType, WorkItemStatus, Estimate, SessionStatus, LeaseStatus,
+  WorkItemType, WorkItemStatus, Estimate, SessionStatus, LeaseStatus, ArtifactStatus, ArtifactType,
 } from './types.js';
 
 export interface Page<T> { items: T[]; page: { total: number; limit: number; offset: number; has_more: boolean }; }
@@ -48,5 +48,17 @@ export function toLeaseView(row: any): LeaseView {
   return {
     id: row.id, work_item: row.work_item_id, agent: row.agent_id, session: row.session_id ?? null,
     status: row.status, acquired_at: row.acquired_at, expires_at: row.expires_at, heartbeat_at: row.heartbeat_at ?? null,
+  };
+}
+
+export interface ArtifactView {
+  id: string; type: ArtifactType; title: string; version: number; status: ArtifactStatus;
+  root: string; supersedes: string | null; created_by: string | null; created_at: string;
+}
+export function toArtifactView(row: any): ArtifactView {
+  return {
+    id: row.id, type: row.type, title: row.title, version: row.version, status: row.status,
+    root: row.root_artifact_id, supersedes: row.supersedes_artifact_id ?? null,
+    created_by: row.created_by ?? null, created_at: row.created_at,
   };
 }

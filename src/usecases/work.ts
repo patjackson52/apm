@@ -12,11 +12,13 @@ function view(tx: any, id: string): WorkItemView {
   const row = r.workItems.byId(id);
   if (!row) throw new ApmError('E_NOT_FOUND', `${id} not found`);
   const lease = tx.get("SELECT id FROM leases WHERE work_item_id=? AND status='active' AND expires_at > ?", id, tx.now()) as { id: string } | undefined;
+  const activeRun = r.runs.activeForWorkItem(id);
+  const artifactIds = r.artifacts.linkedRoots(id).map((root: string) => r.artifacts.currentByRoot(root)?.id).filter(Boolean) as string[];
   return toWorkItemView(row, {
     dependsOn: r.links.dependsOn(id),
-    blockerIds: [],      // Plan 3
-    artifactIds: [],     // Plan 3
-    activeRun: null,     // Plan 3
+    blockerIds: [],      // Plan 3 Task 8
+    artifactIds,
+    activeRun: activeRun?.id ?? null,
     lease: lease?.id ?? null,
   });
 }
