@@ -52,7 +52,7 @@ export function resolve(ctx: Ctx, blockerId: string, a: ResolveBlockerArgs): Blo
 
     r.blockers.resolve(blockerId, { resolution: a.resolution ?? null, answeredBy: a.agent });
 
-    // If this was a review_disagreement blocker, reopen the reviewer child
+    // If this was a review_disagreement blocker, reopen the non-passing reviewer children
     if (blocker.blocker_type === 'review_disagreement') {
       // Find the active run for this work item
       const run = r.runs.activeForWorkItem(blocker.work_item_id);
@@ -63,10 +63,14 @@ export function resolve(ctx: Ctx, blockerId: string, a: ResolveBlockerArgs): Blo
           run.id,
         );
         if (mainStep) {
-          // Extract the role from the blocker reason (format: "Review rejected by role: <role>")
-          const roleMatch = blocker.reason?.match(/Review rejected by role: (.+)/);
-          if (roleMatch) {
-            const role = roleMatch[1].trim();
+          // Extract roles from reason: supports both
+          //   "Review not passed by roles: arch, security"  (new format)
+          //   "Review rejected by role: arch"               (legacy format)
+          const rolesMatch = blocker.reason?.match(/Review not passed by roles: (.+)/);
+          const legacyMatch = !rolesMatch && blocker.reason?.match(/Review rejected by role: (.+)/);
+          const rolesStr = rolesMatch?.[1] ?? legacyMatch?.[1] ?? '';
+          const roles = rolesStr.split(',').map((r: string) => r.trim()).filter(Boolean);
+          for (const role of roles) {
             reopenReviewer(tx, mainStep.id, role);
           }
         }

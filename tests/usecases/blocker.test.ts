@@ -83,8 +83,9 @@ describe('blocker.resolve', () => {
     const run = workflow.attachRun(ctx(), { workItem: wi.id, workflow: 'review_blk_wf', agent: 'claude' });
     step.complete(ctx(), { run: run.id, step: 'prep', agent: 'claude' });
 
-    // arch rejects
+    // arch rejects, security passes → all complete → disagreement blocker created
     step.review(ctx(), { run: run.id, step: 'gate', reviewer: 'arch', verdict: 'reject', agent: 'claude' });
+    step.review(ctx(), { run: run.id, step: 'gate', reviewer: 'security', verdict: 'pass', agent: 'claude' });
 
     const disagreementBlocker = storage.transaction('deferred', (tx) =>
       tx.get<{ id: string }>("SELECT id FROM blockers WHERE work_item_id=? AND blocker_type='review_disagreement' AND status='open'", wi.id));

@@ -127,11 +127,16 @@ describe('step.review — all pass advances', () => {
     expect(r2.status).toBe('completed');
   });
 
-  it('reject verdict blocks work item with review_disagreement', () => {
+  it('reject verdict blocks work item with review_disagreement (after all roles complete)', () => {
     const { wi, run } = setupWorkflow(REVIEW_YAML);
     step.complete(ctx(), { run: run.id, step: 'prep', agent: 'claude' });
 
+    // arch rejects — security still pending, so no blocker yet
     step.review(ctx(), { run: run.id, step: 'gate', reviewer: 'arch', verdict: 'reject', agent: 'claude' });
+    expect(work.show(ctx(), wi.id).status).toBe('ready'); // not blocked yet
+
+    // security passes — now all roles complete but arch rejected → blocker created
+    step.review(ctx(), { run: run.id, step: 'gate', reviewer: 'security', verdict: 'pass', agent: 'claude' });
 
     const wiView = work.show(ctx(), wi.id);
     expect(wiView.status).toBe('blocked');
@@ -145,7 +150,9 @@ describe('step.review — all pass advances', () => {
     const { wi, run } = setupWorkflow(REVIEW_YAML);
     step.complete(ctx(), { run: run.id, step: 'prep', agent: 'claude' });
 
+    // Both reviewers submit (arch rejects, security passes) → all complete → blocker
     step.review(ctx(), { run: run.id, step: 'gate', reviewer: 'arch', verdict: 'reject', agent: 'claude' });
+    step.review(ctx(), { run: run.id, step: 'gate', reviewer: 'security', verdict: 'pass', agent: 'claude' });
 
     // Find the blocker and resolve it — this should reopen the reviewer
     const disagreementBlocker = storage.transaction('deferred', (tx) =>

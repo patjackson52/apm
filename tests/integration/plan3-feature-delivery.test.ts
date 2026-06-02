@@ -134,19 +134,21 @@ describe('feature_delivery e2e workflow', () => {
     artifact.create(ctx(), { workItem: wi.id, type: 'design', title: 'Design', body: 'x', agent: 'claude' });
     step.complete(ctx(), { run: run.id, step: 'design', agent: 'claude' });
 
-    // Now at design_review — architecture pass, security reject
+    // Now at design_review — architecture pass, security reject, simplicity pass
+    // (all 3 must complete for gate to evaluate: new semantics — no early block on single reject)
     step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'architecture', verdict: 'pass', agent: 'claude' });
-    const afterReject = step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'security', verdict: 'reject', agent: 'claude' });
+    step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'security', verdict: 'reject', agent: 'claude' });
+    const afterAllSubmit = step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'simplicity', verdict: 'pass', agent: 'claude' });
 
-    // Work item should be blocked
+    // All 3 complete, security rejected → review_disagreement blocker
     const wiBlocked = work.show(ctx(), wi.id);
     expect(wiBlocked.status).toBe('blocked');
     expect(wiBlocked.blocker_ids.length).toBeGreaterThan(0);
 
     // Run is still on design_review
-    expect(afterReject.current_step).toBe('design_review');
+    expect(afterAllSubmit.current_step).toBe('design_review');
 
-    // Resolve the review_disagreement blocker → reopens security reviewer
+    // Resolve the review_disagreement blocker → reopens security reviewer only
     const openBlockers = work.blockers(ctx(), wi.id);
     expect(openBlockers.open_blockers.length).toBeGreaterThan(0);
     const reviewBlocker = openBlockers.open_blockers.find((b) => b.type === 'review_disagreement');
@@ -158,12 +160,9 @@ describe('feature_delivery e2e workflow', () => {
     const wiUnblocked = work.show(ctx(), wi.id);
     expect(wiUnblocked.status).toBe('ready');
 
-    // Now re-review security with pass — still need simplicity
-    const afterSecurityPass = step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'security', verdict: 'pass', agent: 'claude' });
-    expect(afterSecurityPass.current_step).toBe('design_review'); // still waiting on simplicity
-
-    // simplicity pass → should advance to planning
-    const afterAllPass = step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'simplicity', verdict: 'pass', agent: 'claude' });
+    // Re-review security with pass → all required roles (arch, security, simplicity) now
+    // have latest-round completed with pass → gate advances to planning
+    const afterAllPass = step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'security', verdict: 'pass', agent: 'claude' });
     expect(afterAllPass.current_step).toBe('planning');
   });
 });

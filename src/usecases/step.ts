@@ -243,29 +243,43 @@ export function review(ctx: Ctx, a: ReviewArgs): RunView {
       }
     }
 
-    // Check if any latest-round child is 'reject'
-    const rejected = Array.from(latestByRole.values()).find((c: any) => c.status === 'completed' && c.verdict === 'reject');
-    if (rejected) {
-      // Block work item with review_disagreement blocker
-      r.blockers.insert({
-        workItemId: runRow.work_item_id,
-        type: 'review_disagreement',
-        reason: `Review rejected by role: ${rejected.role}`,
-      });
-      r.workItems.setStatus(runRow.work_item_id, 'blocked', a.agent);
+    // Evaluate the gate outcome using latest-round children per required role
+    const requiredRoles = stepDef.reviewers ?? [];
+
+    // Determine if all required roles have a completed latest-round child
+    const allComplete = requiredRoles.every((role) => {
+      const child = latestByRole.get(role);
+      return child && child.status === 'completed';
+    });
+
+    if (!allComplete) {
+      // Some required role still has a pending child — wait for it
       return toRunView(r.runs.byId(a.run)!, defRow.name);
     }
 
-    // Check if all required reviewers have passed (pass_policy='all_required' is the only V1 policy)
-    const requiredRoles = stepDef.reviewers ?? [];
+    // All required roles are complete. Check if every one passed.
     const allPassed = requiredRoles.every((role) => {
       const child = latestByRole.get(role);
-      return child && child.status === 'completed' && child.verdict === 'pass';
+      return child && child.verdict === 'pass';
     });
 
     if (allPassed) {
       // Complete the review_gate main step → advance to next step
       completeMainStep(tx, def, runRow, mainStep, { artifactId: null }, a.agent);
+    } else {
+      // At least one role rejected or abstained → create review_disagreement blocker
+      const nonPassingRoles = requiredRoles
+        .filter((role) => {
+          const child = latestByRole.get(role);
+          return !child || child.verdict !== 'pass';
+        })
+        .join(', ');
+      r.blockers.insert({
+        workItemId: runRow.work_item_id,
+        type: 'review_disagreement',
+        reason: `Review not passed by roles: ${nonPassingRoles}`,
+      });
+      r.workItems.setStatus(runRow.work_item_id, 'blocked', a.agent);
     }
 
     return toRunView(r.runs.byId(a.run)!, defRow.name);
