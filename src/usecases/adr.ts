@@ -13,6 +13,9 @@ export function createFromDecision(ctx: Ctx, decId: string, agent: string): Arti
     if (decRow.status !== 'decided') {
       throw new ApmError('E_PRECONDITION', `decision ${decId} must be 'decided' to create an ADR (current: ${decRow.status})`);
     }
+    if (decRow.artifact_id) {
+      throw new ApmError('E_CONFLICT', 'decision already has an ADR');
+    }
 
     const body = `# Decision\n\n**Question:** ${decRow.question}\n\n**Decision:** ${decRow.decision}\n\n**Category:** ${decRow.category ?? 'N/A'}\n\n**Confidence:** ${decRow.confidence ?? 'N/A'}%`;
 

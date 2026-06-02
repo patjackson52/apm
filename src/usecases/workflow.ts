@@ -79,6 +79,12 @@ export function attachRun(ctx: Ctx, a: AttachRunArgs): RunView {
     const firstStepDef = firstStep(def);
     enterStep(tx, runId, def, firstStepDef, a.agent);
 
+    // Promote draft work item to ready so it is dispatchable
+    const freshWi = r.workItems.byId(a.workItem)!;
+    if (freshWi.status === 'draft') {
+      r.workItems.setStatus(a.workItem, 'ready', a.agent);
+    }
+
     const runRow = r.runs.byId(runId)!;
     return toRunView(runRow, defRow.name);
   });

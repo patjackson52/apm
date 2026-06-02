@@ -115,6 +115,14 @@ describe('adr.createFromDecision', () => {
     const decView = decision.show(ctx(), d.id);
     expect(decView.artifact_id).toBe(adrView.id);
   });
+
+  it('rejects creating a second ADR when decision already has one (E_CONFLICT)', () => {
+    const wi = work.create(ctx(), { type: 'feature', title: 'F', agent: 'claude' });
+    const d = decision.create(ctx(), { workItem: wi.id, question: 'Use postgres?', options: ['yes', 'no'], agent: 'claude' });
+    decision.accept(ctx(), d.id, 'yes', 'claude');
+    adr.createFromDecision(ctx(), d.id, 'claude');
+    expect(() => adr.createFromDecision(ctx(), d.id, 'claude')).toThrowError(/E_CONFLICT|already has an ADR/i);
+  });
 });
 
 describe('adr.list', () => {
