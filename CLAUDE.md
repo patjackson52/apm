@@ -14,6 +14,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Build: `npm run build` (emits `dist/`, binary at `dist/bin/apm.js`)
 - Run without building: `npx tsx src/bin/apm.ts <args>` (or `npm run apm -- <args>`)
 - Init a project: `apm init` (creates `.apm/apm.db` + `.apm/config.yaml`)
+- Work items: `apm work create --type <t> --title <s> --agent <a>` · `work show <id>` · `work list` · `work update <id> --status ready` · `work link <id> --depends-on <id>` · `work children <id>` · `work cancel <id>` · `work complete <id>`
+- Sessions: `apm session start --agent <a>` · `session show <id>` · `session summarize <id> --body <s>` · `session end <id>`
+- Leases: `apm lease acquire <wi> --agent <a> --ttl 30m` · `lease heartbeat <id> --ttl 30m` · `lease release <id>` · `lease expire-stale` · `lease list --agent <a>`
+- Global: `-o, --format human|json|yaml|agent` (default human at TTY, json piped; `APM_FORMAT` to pin)
 
 ## Engineering invariants (V1)
 

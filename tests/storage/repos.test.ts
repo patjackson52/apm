@@ -1,0 +1,49 @@
+import { describe, it, expect } from 'vitest';
+import { SqliteStorage } from '../../src/storage/sqlite.js';
+import { fixedClock } from '../../src/domain/clock.js';
+import { repos } from '../../src/storage/repos.js';
+
+function mem() { return new SqliteStorage(':memory:', fixedClock('2026-06-02T12:00:00.000Z')); }
+
+describe('repos', () => {
+  it('upserts an agent by name (idempotent) and returns its id', () => {
+    const s = mem();
+    const [a1, a2] = s.transaction('immediate', (tx) => {
+      const r = repos(tx);
+      return [r.agents.ensure('claude'), r.agents.ensure('claude')];
+    });
+    expect(a1).toBe('claude');           // agent id == name for V1
+    expect(a2).toBe('claude');
+    const count = s.transaction('deferred', (tx) => tx.get<{ c: number }>('SELECT count(*) c FROM agents')!.c);
+    expect(count).toBe(1);
+    s.close();
+  });
+
+  it('inserts and fetches a work item', () => {
+    const s = mem();
+    const id = s.transaction('immediate', (tx) => {
+      const r = repos(tx);
+      r.agents.ensure('claude');
+      return r.workItems.insert({ type: 'feature', title: 'Offline', description: 'd', priority: 2, estimate: 'M', parentId: null, createdBy: 'claude' });
+    });
+    expect(id).toBe('WI-1');
+    const row = s.transaction('deferred', (tx) => repos(tx).workItems.byId('WI-1'));
+    expect(row!.title).toBe('Offline');
+    expect(row!.status).toBe('draft');
+    s.close();
+  });
+
+  it('records a depends_on link and lists dependency ids', () => {
+    const s = mem();
+    const deps = s.transaction('immediate', (tx) => {
+      const r = repos(tx);
+      r.agents.ensure('claude');
+      const a = r.workItems.insert({ type: 'feature', title: 'A', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude' });
+      const b = r.workItems.insert({ type: 'task', title: 'B', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude' });
+      r.links.add(a, b, 'depends_on');
+      return r.links.dependsOn(a);
+    });
+    expect(deps).toEqual(['WI-2']);
+    s.close();
+  });
+});
