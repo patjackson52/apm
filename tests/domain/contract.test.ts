@@ -28,6 +28,14 @@ describe('buildContract', () => {
     expect(c.when_done[0]).toContain('apm step complete WR-1 pr_create');
   });
 
+  it('multi-output agent_prompt lists extra creates before the complete', () => {
+    const step = { id: 'brainstorm', type: 'agent_prompt', outputs: [{ artifact_type: 'decision' }, { artifact_type: 'spec' }], next: ['x'] } as any;
+    const c = buildContract(step, [], { workItem: 'WI-1', run: 'WR-1', session: 'S-1' });
+    expect(c.when_done.at(-1)).toContain('apm step complete WR-1 brainstorm');
+    expect(c.when_done.at(-1)).toContain('--artifact-type decision');
+    expect(c.when_done.some((l: string) => l.includes('apm artifact create') && l.includes('--type spec'))).toBe(true);
+  });
+
   it('caps do_not at 3 entries', () => {
     const step: StepDef = { id: 'design', type: 'agent_prompt', outputs: [{ artifact_type: 'design' }], next: ['x'] };
     const c = buildContract(step, [], ctxIds);

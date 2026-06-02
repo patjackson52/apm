@@ -28,7 +28,8 @@ describe('next usecase', () => {
     expect(r.status).toBe('dispatched');
     expect(r.data.work_item).toBe(wi.id);
     expect(r.data.step.id).toBe('brainstorm');
-    expect(r.data.when_done[0]).toContain(`apm step complete ${run.id} brainstorm`);
+    expect(r.data.when_done.at(-1)).toContain(`apm step complete ${run.id} brainstorm`);
+    expect(r.data.when_done.some((c: string) => c.includes('apm artifact create') && c.includes('--type spec'))).toBe(true);
     expect(next.nextExitCode(r)).toBe(0);
   });
 
