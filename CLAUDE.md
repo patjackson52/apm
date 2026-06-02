@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project State
 
-**Implementation underway (V1).** TypeScript/Node CLI. Specs in `docs/`; design spec in `docs/superpowers/specs/2026-06-02-apm-v1-cli-design.md`; implementation plans in `docs/superpowers/plans/`. `.obsidian/` is editor config; `.apm/` (runtime db) is gitignored.
+**V1 complete. TypeScript/Node CLI; full work-graph + workflow engine + agent loop. See docs/superpowers/plans/ for the 4 implementation plans.** Specs in `docs/`; design spec in `docs/superpowers/specs/2026-06-02-apm-v1-cli-design.md`; implementation plans in `docs/superpowers/plans/`. `.obsidian/` is editor config; `.apm/` (runtime db) is gitignored.
 
 ## Commands
 
@@ -29,6 +29,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Policy: `apm policy create --scope-type <t> [--scope-id <id>] --policy-file <f>` · `policy list` · `policy show [--work-item <wi>]`
 - Prompts: `apm prompt create --name <n> --body-file <f>` · `prompt list` · `prompt show <name>`
 - Work (extended): `apm work current <id>` · `work blockers <id>`
+- Agent loop: `apm next --agent <a> --session current --acquire --format agent` — dispatches the next allowed action; exit 0 dispatched, 3 drained, 10 idle/retry, 20 awaiting-human
+- Status: `apm status` — global dashboard (counts, active leases, open blockers, awaiting-human, active runs)
 
 ## Engineering invariants (V1)
 
