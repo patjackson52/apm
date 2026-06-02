@@ -2,7 +2,7 @@ import type { Ctx } from '../cli/run.js';
 import { ApmError } from '../domain/errors.js';
 import { repos } from '../storage/repos.js';
 import { WORK_ITEM_TYPES, WORK_ITEM_STATUSES, ESTIMATES, type WorkItemType, type Estimate } from '../domain/types.js';
-import { toWorkItemView, type WorkItemView, type Page } from '../domain/entities.js';
+import { toWorkItemView, toBlockerView, type WorkItemView, type BlockerView, type Page } from '../domain/entities.js';
 
 export interface CreateArgs { type: WorkItemType; title: string; description?: string; priority?: number; estimate?: Estimate; parent?: string; agent: string; }
 
@@ -12,11 +12,14 @@ function view(tx: any, id: string): WorkItemView {
   const row = r.workItems.byId(id);
   if (!row) throw new ApmError('E_NOT_FOUND', `${id} not found`);
   const lease = tx.get("SELECT id FROM leases WHERE work_item_id=? AND status='active' AND expires_at > ?", id, tx.now()) as { id: string } | undefined;
+  const activeRun = r.runs.activeForWorkItem(id);
+  const artifactIds = r.artifacts.linkedRoots(id).map((root: string) => r.artifacts.currentByRoot(root)?.id).filter(Boolean) as string[];
+  const blockerIds = r.blockers.openForWorkItem(id).map((b: any) => b.id as string);
   return toWorkItemView(row, {
     dependsOn: r.links.dependsOn(id),
-    blockerIds: [],      // Plan 3
-    artifactIds: [],     // Plan 3
-    activeRun: null,     // Plan 3
+    blockerIds,
+    artifactIds,
+    activeRun: activeRun?.id ?? null,
     lease: lease?.id ?? null,
   });
 }
@@ -100,6 +103,91 @@ export function link(ctx: Ctx, source: string, target: string, agent: string): W
     r.links.add(source, target, 'depends_on');
     tx.appendEvent({ actorId: agent, eventType: 'work_item.linked', entityType: 'work_item', entityId: source, payload: { depends_on: target } });
     return view(tx, source);
+  });
+}
+
+export interface CurrentStep {
+  id: string;
+  type: string;
+}
+
+export interface ArtifactRef {
+  id: string;
+  version: number;
+  type: string;
+}
+
+export interface WorkCurrentResult {
+  work_item: WorkItemView;
+  run: string | null;
+  step: CurrentStep | null;
+  required_context: ArtifactRef[];
+}
+
+/** READ-ONLY: returns current step + required artifact refs without advancing or leasing. */
+export function current(ctx: Ctx, id: string): WorkCurrentResult {
+  return ctx.storage.transaction('deferred', (tx) => {
+    const r = repos(tx);
+    const row = r.workItems.byId(id);
+    if (!row) throw new ApmError('E_NOT_FOUND', `${id} not found`);
+
+    const activeRun = r.runs.activeForWorkItem(id);
+    if (!activeRun) {
+      return { work_item: view(tx, id), run: null, step: null, required_context: [] };
+    }
+
+    const mainStep = r.stepRuns.mainPending(activeRun.id);
+    if (!mainStep) {
+      return { work_item: view(tx, id), run: activeRun.id, step: null, required_context: [] };
+    }
+
+    // Resolve required artifacts for the current step from the workflow def
+    let requiredContext: ArtifactRef[] = [];
+    const defRow = r.defs.byId(activeRun.workflow_definition_id);
+    if (defRow) {
+      const def = JSON.parse(defRow.definition_json);
+      const stepDef = def.steps?.find((s: any) => s.id === mainStep.step_id);
+      const requires: string[] = stepDef?.requires?.artifacts ?? [];
+      for (const artType of requires) {
+        const art = r.artifacts.currentByTypeForWorkItem(id, artType);
+        if (art) {
+          requiredContext.push({ id: art.id, version: art.version, type: art.type });
+        }
+      }
+    }
+
+    return {
+      work_item: view(tx, id),
+      run: activeRun.id,
+      step: { id: mainStep.step_id, type: mainStep.step_type ?? (defRow ? JSON.parse(defRow.definition_json).steps?.find((s: any) => s.id === mainStep.step_id)?.type ?? 'unknown' : 'unknown') },
+      required_context: requiredContext,
+    };
+  });
+}
+
+export interface BlockersResult {
+  open_blockers: BlockerView[];
+  unmet_dependencies: string[];
+}
+
+/** Returns open blockers + unmet deps (depends_on targets that are not completed). */
+export function blockers(ctx: Ctx, id: string): BlockersResult {
+  return ctx.storage.transaction('deferred', (tx) => {
+    const r = repos(tx);
+    if (!r.workItems.byId(id)) throw new ApmError('E_NOT_FOUND', `${id} not found`);
+
+    const openBlockers = r.blockers.openForWorkItem(id).map(toBlockerView);
+
+    const depIds = r.links.dependsOn(id);
+    const unmetDeps: string[] = [];
+    for (const depId of depIds) {
+      const dep = r.workItems.byId(depId);
+      if (dep && dep.status !== 'completed') {
+        unmetDeps.push(depId);
+      }
+    }
+
+    return { open_blockers: openBlockers, unmet_dependencies: unmetDeps };
   });
 }
 

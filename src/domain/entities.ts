@@ -1,5 +1,5 @@
 import type {
-  WorkItemType, WorkItemStatus, Estimate, SessionStatus, LeaseStatus,
+  WorkItemType, WorkItemStatus, Estimate, SessionStatus, LeaseStatus, ArtifactStatus, ArtifactType,
 } from './types.js';
 
 export interface Page<T> { items: T[]; page: { total: number; limit: number; offset: number; has_more: boolean }; }
@@ -48,5 +48,66 @@ export function toLeaseView(row: any): LeaseView {
   return {
     id: row.id, work_item: row.work_item_id, agent: row.agent_id, session: row.session_id ?? null,
     status: row.status, acquired_at: row.acquired_at, expires_at: row.expires_at, heartbeat_at: row.heartbeat_at ?? null,
+  };
+}
+
+export interface RunView {
+  id: string; work_item: string; workflow: string; status: string;
+  current_step: string | null; started_at: string; completed_at: string | null;
+}
+export function toRunView(row: any, workflowName: string): RunView {
+  // Terminal/cancelled runs have no active current step
+  const isTerminal = row.status === 'completed' || row.status === 'cancelled';
+  return {
+    id: row.id, work_item: row.work_item_id, workflow: workflowName,
+    status: row.status, current_step: isTerminal ? null : (row.current_step_id ?? null),
+    started_at: row.started_at, completed_at: row.completed_at ?? null,
+  };
+}
+
+export interface ArtifactView {
+  id: string; type: ArtifactType; title: string; version: number; status: ArtifactStatus;
+  root: string; supersedes: string | null; created_by: string | null; created_at: string;
+}
+export function toArtifactView(row: any): ArtifactView {
+  return {
+    id: row.id, type: row.type, title: row.title, version: row.version, status: row.status,
+    root: row.root_artifact_id, supersedes: row.supersedes_artifact_id ?? null,
+    created_by: row.created_by ?? null, created_at: row.created_at,
+  };
+}
+
+export interface DecisionView {
+  id: string; work_item: string | null; question: string; options: string[];
+  recommendation: string | null; confidence: number | null; decision: string | null;
+  category: string | null; status: string; artifact_id: string | null;
+  created_at: string; decided_at: string | null;
+}
+export function toDecisionView(row: any): DecisionView {
+  return {
+    id: row.id, work_item: row.work_item_id ?? null, question: row.question,
+    options: row.options_json ? JSON.parse(row.options_json) : [],
+    recommendation: row.recommendation ?? null, confidence: row.confidence ?? null,
+    decision: row.decision ?? null, category: row.category ?? null,
+    status: row.status, artifact_id: row.artifact_id ?? null,
+    created_at: row.created_at, decided_at: row.decided_at ?? null,
+  };
+}
+
+export interface BlockerView {
+  id: string; work_item: string; type: string; reason: string; status: string;
+  question: string | null; options: string[]; resolution: string | null;
+  answer: string | null; choice: string | null; answered_by: string | null;
+  answered_at: string | null; resolved_at: string | null; created_at: string;
+}
+export function toBlockerView(row: any): BlockerView {
+  return {
+    id: row.id, work_item: row.work_item_id, type: row.blocker_type, reason: row.reason,
+    status: row.status, question: row.question ?? null,
+    options: row.options_json ? JSON.parse(row.options_json) : [],
+    resolution: row.resolution ?? null, answer: row.answer ?? null,
+    choice: row.choice ?? null, answered_by: row.answered_by ?? null,
+    answered_at: row.answered_at ?? null, resolved_at: row.resolved_at ?? null,
+    created_at: row.created_at,
   };
 }

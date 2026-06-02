@@ -47,3 +47,43 @@ describe('repos', () => {
     s.close();
   });
 });
+
+describe('repos extensions', () => {
+  it('artifacts: insert v1 sets root to own id; currentByRoot returns latest version', () => {
+    const s = mem();
+    const ids = s.transaction('immediate', (tx) => {
+      const r = repos(tx); r.agents.ensure('claude');
+      const v1 = r.artifacts.insert({ type: 'spec', title: 'Spec', body: 'a', createdBy: 'claude', version: 1 });
+      const v2 = r.artifacts.insert({ type: 'spec', title: 'Spec', body: 'b', createdBy: 'claude', version: 2, rootId: v1, supersedes: v1 });
+      return { v1, v2 };
+    });
+    const cur = s.transaction('deferred', (tx) => repos(tx).artifacts.currentByRoot(ids.v1));
+    expect(cur.id).toBe(ids.v2); expect(cur.version).toBe(2);
+    s.close();
+  });
+
+  it('runs: one active run per work item enforced', () => {
+    const s = mem();
+    expect(() => s.transaction('immediate', (tx) => {
+      const r = repos(tx); r.agents.ensure('claude');
+      const wi = r.workItems.insert({ type: 'feature', title: 'A', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude' });
+      const def = tx.allocateId('WD'); tx.run("INSERT INTO workflow_definitions (id,name,version,definition_json,status,created_at) VALUES (?, 'x', 1, '{}', 'active', ?)", def, tx.now());
+      r.runs.insert(wi, def); r.runs.insert(wi, def); // second active run -> UNIQUE violation
+    })).toThrowError(/UNIQUE/i);
+    s.close();
+  });
+
+  it('stepRuns: mainPending returns the single pending main-path step', () => {
+    const s = mem();
+    const got = s.transaction('immediate', (tx) => {
+      const r = repos(tx); r.agents.ensure('claude');
+      const wi = r.workItems.insert({ type: 'feature', title: 'A', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude' });
+      const def = tx.allocateId('WD'); tx.run("INSERT INTO workflow_definitions (id,name,version,definition_json,status,created_at) VALUES (?, 'x', 1, '{}', 'active', ?)", def, tx.now());
+      const run = r.runs.insert(wi, def);
+      r.stepRuns.insertPending(run, 'brainstorm');
+      return r.stepRuns.mainPending(run);
+    });
+    expect(got.step_id).toBe('brainstorm');
+    s.close();
+  });
+});

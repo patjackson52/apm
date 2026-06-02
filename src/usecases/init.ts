@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import type { Clock } from '../domain/clock.js';
 import type { Storage } from '../storage/storage.js';
 import { SqliteStorage } from '../storage/sqlite.js';
+import { seedBuiltins } from './seed.js';
 
 const DEFAULT_CONFIG = `# APM tool configuration (not policies — those live in the DB).
 capabilities:
@@ -31,6 +32,7 @@ export function initProject(
   mkdirSync(apmDir, { recursive: true });
 
   const storage = createStorage(dbPath, clock);
+  seedBuiltins(storage);
   storage.close();
 
   const configPath = join(apmDir, 'config.yaml');
