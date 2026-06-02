@@ -25,8 +25,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
   program.option('-o, --format <fmt>', 'output format: human|json|yaml|agent');
   program.option('--dir <path>', 'project directory');
 
-  function deps_(cmd: Command): RunDeps {
-    const g = program.optsWithGlobals() as { format?: string; dir?: string };
+  function buildDeps(): RunDeps {
+    const g = program.opts() as { format?: string; dir?: string };
     return {
       dir: g.dir,
       clock,
@@ -39,9 +39,9 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .command('init')
     .description('Initialize an APM project in the current directory')
     .option('--dir <path>', 'project directory')
-    .action(function (opts: { dir?: string }) {
+    .action(function (this: Command, opts: { dir?: string }) {
       // Merge local --dir with global --dir (global may have captured it).
-      const g = (this as any).optsWithGlobals() as { dir?: string };
+      const g = this.optsWithGlobals() as { dir?: string };
       const dir = opts.dir ?? g.dir ?? process.cwd();
       const res = initProject(dir, clock);
       out(res.created ? `APM initialized at ${res.dbPath}` : `APM already initialized at ${res.dbPath}`);
@@ -60,14 +60,14 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .option('--estimate <e>', 'estimate (XS|S|M|L|XL)')
     .option('--parent <id>', 'parent work item id')
     .requiredOption('--agent <name>', 'agent name')
-    .action(function (o) {
-      process.exitCode = runCommand(deps_(this), 'work create', (ctx) => ({
+    .action(function (this: Command, o: { type: string; title: string; description?: string; priority?: number; estimate?: string; parent?: string; agent: string }) {
+      process.exitCode = runCommand(buildDeps(), 'work create', (ctx) => ({
         data: work.create(ctx, {
-          type: o.type,
+          type: o.type as any,
           title: o.title,
           description: o.description,
           priority: o.priority,
-          estimate: o.estimate,
+          estimate: o.estimate as any,
           parent: o.parent,
           agent: o.agent,
         }),
@@ -77,8 +77,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
   workCmd
     .command('show <id>')
     .description('Show a work item')
-    .action(function (id) {
-      process.exitCode = runCommand(deps_(this), 'work show', (ctx) => ({
+    .action(function (this: Command, id: string) {
+      process.exitCode = runCommand(buildDeps(), 'work show', (ctx) => ({
         data: work.show(ctx, id),
       }));
     });
@@ -90,8 +90,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .option('--offset <n>', 'offset', (v: string) => parseInt(v, 10))
     .option('--status <s>', 'filter by status')
     .option('--type <t>', 'filter by type')
-    .action(function (o) {
-      process.exitCode = runCommand(deps_(this), 'work list', (ctx) => ({
+    .action(function (this: Command, o: { limit?: number; offset?: number; status?: string; type?: string }) {
+      process.exitCode = runCommand(buildDeps(), 'work list', (ctx) => ({
         data: work.list(ctx, { limit: o.limit, offset: o.offset, status: o.status, type: o.type }),
       }));
     });
@@ -105,13 +105,13 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .option('--estimate <e>', 'new estimate')
     .option('--status <s>', 'new status')
     .option('--agent <name>', 'agent name')
-    .action(function (id, o) {
-      process.exitCode = runCommand(deps_(this), 'work update', (ctx) => ({
+    .action(function (this: Command, id: string, o: { title?: string; description?: string; priority?: number; estimate?: string; status?: string; agent?: string }) {
+      process.exitCode = runCommand(buildDeps(), 'work update', (ctx) => ({
         data: work.update(ctx, id, {
           title: o.title,
           description: o.description,
           priority: o.priority,
-          estimate: o.estimate,
+          estimate: o.estimate as any,
           status: o.status,
         }, o.agent ?? 'unknown'),
       }));
@@ -122,8 +122,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .description('Add a dependency link')
     .requiredOption('--depends-on <target>', 'target work item id')
     .option('--agent <name>', 'agent name')
-    .action(function (id, o) {
-      process.exitCode = runCommand(deps_(this), 'work link', (ctx) => ({
+    .action(function (this: Command, id: string, o: { dependsOn: string; agent?: string }) {
+      process.exitCode = runCommand(buildDeps(), 'work link', (ctx) => ({
         data: work.link(ctx, id, o.dependsOn, o.agent ?? 'unknown'),
       }));
     });
@@ -131,8 +131,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
   workCmd
     .command('children <id>')
     .description('List children of a work item')
-    .action(function (id) {
-      process.exitCode = runCommand(deps_(this), 'work children', (ctx) => ({
+    .action(function (this: Command, id: string) {
+      process.exitCode = runCommand(buildDeps(), 'work children', (ctx) => ({
         data: work.children(ctx, id),
       }));
     });
@@ -141,8 +141,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .command('cancel <id>')
     .description('Cancel a work item (cascades to children)')
     .option('--agent <name>', 'agent name')
-    .action(function (id, o) {
-      process.exitCode = runCommand(deps_(this), 'work cancel', (ctx) => ({
+    .action(function (this: Command, id: string, o: { agent?: string }) {
+      process.exitCode = runCommand(buildDeps(), 'work cancel', (ctx) => ({
         data: work.cancel(ctx, id, o.agent ?? 'unknown'),
       }));
     });
@@ -151,8 +151,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .command('complete <id>')
     .description('Complete a work item')
     .option('--agent <name>', 'agent name')
-    .action(function (id, o) {
-      process.exitCode = runCommand(deps_(this), 'work complete', (ctx) => ({
+    .action(function (this: Command, id: string, o: { agent?: string }) {
+      process.exitCode = runCommand(buildDeps(), 'work complete', (ctx) => ({
         data: work.update(ctx, id, { status: 'completed' }, o.agent ?? 'unknown'),
       }));
     });
@@ -164,8 +164,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .command('start')
     .description('Start a session')
     .requiredOption('--agent <name>', 'agent name')
-    .action(function (o) {
-      process.exitCode = runCommand(deps_(this), 'session start', (ctx) => ({
+    .action(function (this: Command, o: { agent: string }) {
+      process.exitCode = runCommand(buildDeps(), 'session start', (ctx) => ({
         data: session.start(ctx, o.agent),
       }));
     });
@@ -173,8 +173,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
   sessionCmd
     .command('show <id>')
     .description('Show a session')
-    .action(function (id) {
-      process.exitCode = runCommand(deps_(this), 'session show', (ctx) => ({
+    .action(function (this: Command, id: string) {
+      process.exitCode = runCommand(buildDeps(), 'session show', (ctx) => ({
         data: session.show(ctx, id),
       }));
     });
@@ -183,8 +183,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .command('summarize <id>')
     .description('Record a context summary for a session')
     .requiredOption('--body <text>', 'summary text')
-    .action(function (id, o) {
-      process.exitCode = runCommand(deps_(this), 'session summarize', (ctx) => ({
+    .action(function (this: Command, id: string, o: { body: string }) {
+      process.exitCode = runCommand(buildDeps(), 'session summarize', (ctx) => ({
         data: session.summarize(ctx, id, o.body),
       }));
     });
@@ -192,8 +192,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
   sessionCmd
     .command('end <id>')
     .description('End a session')
-    .action(function (id) {
-      process.exitCode = runCommand(deps_(this), 'session end', (ctx) => ({
+    .action(function (this: Command, id: string) {
+      process.exitCode = runCommand(buildDeps(), 'session end', (ctx) => ({
         data: session.end(ctx, id),
       }));
     });
@@ -207,8 +207,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .requiredOption('--agent <name>', 'agent name')
     .requiredOption('--ttl <duration>', 'TTL e.g. 30m')
     .option('--session <id>', 'session id')
-    .action(function (wi, o) {
-      process.exitCode = runCommand(deps_(this), 'lease acquire', (ctx) => ({
+    .action(function (this: Command, wi: string, o: { agent: string; ttl: string; session?: string }) {
+      process.exitCode = runCommand(buildDeps(), 'lease acquire', (ctx) => ({
         data: lease.acquire(ctx, { workItem: wi, agent: o.agent, ttl: o.ttl, session: o.session }),
       }));
     });
@@ -217,8 +217,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .command('heartbeat <id>')
     .description('Extend a lease')
     .requiredOption('--ttl <duration>', 'TTL e.g. 30m')
-    .action(function (id, o) {
-      process.exitCode = runCommand(deps_(this), 'lease heartbeat', (ctx) => ({
+    .action(function (this: Command, id: string, o: { ttl: string }) {
+      process.exitCode = runCommand(buildDeps(), 'lease heartbeat', (ctx) => ({
         data: lease.heartbeat(ctx, id, o.ttl),
       }));
     });
@@ -226,8 +226,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
   leaseCmd
     .command('release <id>')
     .description('Release a lease')
-    .action(function (id) {
-      process.exitCode = runCommand(deps_(this), 'lease release', (ctx) => ({
+    .action(function (this: Command, id: string) {
+      process.exitCode = runCommand(buildDeps(), 'lease release', (ctx) => ({
         data: lease.release(ctx, id),
       }));
     });
@@ -235,8 +235,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
   leaseCmd
     .command('expire-stale')
     .description('Expire all stale leases')
-    .action(function () {
-      process.exitCode = runCommand(deps_(this), 'lease expire-stale', (ctx) => ({
+    .action(function (this: Command) {
+      process.exitCode = runCommand(buildDeps(), 'lease expire-stale', (ctx) => ({
         data: lease.expireStale(ctx),
       }));
     });
@@ -246,8 +246,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .description('List active leases')
     .option('--agent <name>', 'filter by agent')
     .option('--session <id>', 'filter by session')
-    .action(function (o) {
-      process.exitCode = runCommand(deps_(this), 'lease list', (ctx) => ({
+    .action(function (this: Command, o: { agent?: string; session?: string }) {
+      process.exitCode = runCommand(buildDeps(), 'lease list', (ctx) => ({
         data: lease.list(ctx, { agent: o.agent, session: o.session }),
       }));
     });
