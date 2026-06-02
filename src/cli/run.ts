@@ -41,7 +41,14 @@ export function runCommand(deps: RunDeps, command: string, fn: (ctx: Ctx) => Cmd
   const format = deps.format ?? 'json';
   let storage: Storage | undefined;
   try {
-    const dbPath = findProjectDb(deps.dir ?? process.cwd());
+    // When --dir is explicit, look only in that exact directory (no walk-up).
+    const dbPath = deps.dir != null
+      ? (() => {
+          const candidate = join(resolve(deps.dir), '.apm', 'apm.db');
+          if (!existsSync(candidate)) throw new ApmError('E_NOT_FOUND', 'no APM project found (run `apm init`)');
+          return candidate;
+        })()
+      : findProjectDb(process.cwd());
     storage = new SqliteStorage(dbPath, clock);
     const result = fn({ storage, clock });
     out(render(format, ok(result.data, buildMeta(command, clock, result.session))));
