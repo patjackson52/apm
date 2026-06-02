@@ -11,6 +11,31 @@ import { ApmError } from './errors.js';
 import { nextStepId, stepById, type WorkflowDef, type StepDef } from './workflow.js';
 
 /**
+ * Reopen a reviewer child step_run for a given role on a review_gate main step.
+ * Increments the review_round. Used by blocker.resolve when blocker_type='review_disagreement'.
+ */
+export function reopenReviewer(tx: Tx, mainStepRunId: string, role: string): string {
+  const r = repos(tx);
+  const mainStep = r.stepRuns.byId(mainStepRunId);
+  if (!mainStep) throw new ApmError('E_NOT_FOUND', `step_run ${mainStepRunId} not found`);
+
+  // Find the highest review_round for this role to determine the new round
+  const existing = tx.all<{ review_round: number }>(
+    'SELECT review_round FROM workflow_step_runs WHERE parent_step_run_id=? AND role=? ORDER BY review_round DESC LIMIT 1',
+    mainStepRunId, role,
+  );
+  const lastRound = existing[0]?.review_round ?? 0;
+  const newRound = lastRound + 1;
+
+  const id = r.stepRuns.insertPending(mainStep.workflow_run_id, mainStep.step_id, mainStepRunId, role, newRound);
+  tx.appendEvent({
+    eventType: 'workflow_run.reviewer_reopened', entityType: 'workflow_step_run',
+    entityId: id, payload: { mainStepRunId, role, round: newRound },
+  });
+  return id;
+}
+
+/**
  * Enter the given step for the run. Creates the pending main step_run and performs
  * type-specific side effects. For terminal: completes the run + work item instead.
  */
