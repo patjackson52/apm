@@ -2,3 +2,5 @@ node_modules/
 dist/
 .apm/
 *.log
+*.db-wal
+*.db-shm

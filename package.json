@@ -5,7 +5,7 @@
   "type": "module",
   "bin": { "apm": "dist/bin/apm.js" },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && cp src/storage/schema.sql dist/storage/schema.sql",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",

@@ -18,9 +18,9 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
   program
     .command('init')
     .description('Initialize an APM project in the current directory')
-    .option('--dir <path>', 'project directory', process.cwd())
-    .action((opts: { dir: string }) => {
-      const res = initProject(opts.dir, clock);
+    .option('--dir <path>', 'project directory')
+    .action((opts: { dir?: string }) => {
+      const res = initProject(opts.dir ?? process.cwd(), clock);
       out(res.created ? `APM initialized at ${res.dbPath}` : `APM already initialized at ${res.dbPath}`);
     });
 
