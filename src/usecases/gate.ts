@@ -1,7 +1,7 @@
 import type { Ctx } from '../cli/run.js';
 import { ApmError } from '../domain/errors.js';
 import { repos } from '../storage/repos.js';
-import { validateWorkflow } from '../domain/workflow.js';
+import { validateWorkflow, stepById } from '../domain/workflow.js';
 import { completeMainStep } from '../domain/advance.js';
 import { toBlockerView, toRunView, type BlockerView, type RunView } from '../domain/entities.js';
 
@@ -72,7 +72,19 @@ export function answer(ctx: Ctx, blockerId: string, a: AnswerGateArgs): RunView 
       return toRunView(r.runs.byId(run.id)!, defRow.name);
     }
 
-    // Complete the human_gate step_run → advance to next step
+    // If the gated step is a decision step, record the human choice on the decision
+    const gateStepDef = stepById(defObj, gateStepRun.step_id);
+    if (gateStepDef?.type === 'decision') {
+      const decRow = tx.get<any>(
+        "SELECT * FROM decisions WHERE work_item_id=? AND status NOT IN ('decided','cancelled') ORDER BY id DESC LIMIT 1",
+        blocker.work_item_id,
+      );
+      if (decRow) {
+        r.decisions.setDecided(decRow.id, a.choice, null);
+      }
+    }
+
+    // Complete the step_run → advance to next step
     completeMainStep(tx, defObj, run, gateStepRun, { artifactId: null }, a.agent);
 
     // Unblock work item if no remaining blockers

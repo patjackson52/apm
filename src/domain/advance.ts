@@ -9,6 +9,7 @@ import type { Tx } from '../storage/storage.js';
 import { repos } from '../storage/repos.js';
 import { ApmError } from './errors.js';
 import { nextStepId, stepById, type WorkflowDef, type StepDef } from './workflow.js';
+import { effectivePolicy } from './policy.js';
 
 /**
  * Reopen a reviewer child step_run for a given role on a review_gate main step.
@@ -108,6 +109,53 @@ export function enterStep(
 }
 
 /**
+ * Auto-accept a decision: mark it decided with the recommendation as the choice,
+ * optionally create an ADR artifact if adr_policy matches.
+ * Returns the artifact id if an ADR was created, null otherwise.
+ */
+export function autoAcceptDecision(
+  tx: Tx,
+  decRow: any,
+  actor: string,
+): string | null {
+  const r = repos(tx);
+  const choice = decRow.recommendation ?? decRow.decision;
+  if (!choice) throw new ApmError('E_PRECONDITION', 'decision has no recommendation to auto-accept');
+
+  let artifactId: string | null = null;
+
+  // Policy check for auto-create ADR (mirrors decision.accept logic)
+  if (decRow.work_item_id) {
+    const policy = effectivePolicy(tx, decRow.work_item_id);
+    const adrPolicy = (policy as any).adr_policy;
+    if (adrPolicy?.auto_create) {
+      const categories: string[] = adrPolicy.categories ?? [];
+      const threshold: number = adrPolicy.confidence_threshold ?? 100;
+      const confidence: number = decRow.confidence ?? 0;
+      if (decRow.category && categories.includes(decRow.category) && confidence >= threshold) {
+        const adrBody = `# Decision\n\n**Question:** ${decRow.question}\n\n**Decision:** ${choice}\n\n**Category:** ${decRow.category}\n\n**Confidence:** ${confidence}%`;
+        const artId = r.artifacts.insert({
+          type: 'adr',
+          title: decRow.question,
+          body: adrBody,
+          createdBy: actor,
+          version: 1,
+        });
+        r.artifacts.linkToWorkItem(decRow.work_item_id, artId, 'decision');
+        artifactId = artId;
+        tx.appendEvent({
+          actorId: actor, eventType: 'adr.auto_created', entityType: 'artifact',
+          entityId: artId, payload: { decisionId: decRow.id },
+        });
+      }
+    }
+  }
+
+  r.decisions.setDecided(decRow.id, choice, artifactId);
+  return artifactId;
+}
+
+/**
  * Complete the main (non-child) step_run for a run.
  * Enforces required output artifacts, then advances to the next step.
  */
@@ -137,14 +185,61 @@ export function completeMainStep(
     }
   }
 
-  // 3. Mark step_run completed
+  // 3. Decision step: evaluate decision + policy before marking completed
+  if (stepDef.type === 'decision') {
+    // Find a Decision record linked to this work item in a decidable state
+    const decRow = tx.get<any>(
+      "SELECT * FROM decisions WHERE work_item_id=? AND status IN ('recommended','decided','open') ORDER BY id DESC LIMIT 1",
+      runRow.work_item_id,
+    );
+    if (!decRow) {
+      throw new ApmError('E_PRECONDITION', `no decision record found for work item ${runRow.work_item_id}`);
+    }
+
+    if (decRow.status === 'decided') {
+      // Already decided — just advance
+    } else {
+      // Evaluate effectivePolicy
+      const policy = effectivePolicy(tx, runRow.work_item_id);
+      const autoAcceptPolicy = (policy as any).auto_accept_recommendations;
+      const threshold: number = autoAcceptPolicy?.confidence_threshold ?? 100;
+      const confidence: number = decRow.confidence ?? null;
+
+      const shouldAutoAccept = confidence !== null && confidence >= threshold;
+
+      if (shouldAutoAccept) {
+        // Auto-accept: mark decided, optionally create ADR
+        autoAcceptDecision(tx, decRow, actor);
+      } else {
+        // Below threshold / undecided → create human_gate blocker, do NOT advance
+        r.blockers.insert({
+          workItemId: runRow.work_item_id,
+          type: 'human_gate',
+          reason: `Decision required: ${decRow.question}`,
+          question: decRow.question,
+          optionsJson: decRow.options_json ?? JSON.stringify([]),
+        });
+        r.workItems.setStatus(runRow.work_item_id, 'blocked', actor);
+        // Mark step_run as running (waiting for gate answer)
+        r.stepRuns.setStatus(stepRunRow.id, 'running');
+        r.runs.setCurrentStep(runRow.id, stepDef.id);
+        tx.appendEvent({
+          actorId: actor, eventType: 'workflow_run.step_blocked_on_decision', entityType: 'workflow_run',
+          entityId: runRow.id, payload: { stepId: stepRunRow.step_id, decisionId: decRow.id },
+        });
+        return; // Do NOT advance
+      }
+    }
+  }
+
+  // 4. Mark step_run completed
   r.stepRuns.complete(stepRunRow.id, { artifactId: opts.artifactId ?? null });
   tx.appendEvent({
     actorId: actor, eventType: 'workflow_run.step_completed', entityType: 'workflow_run',
     entityId: runRow.id, payload: { stepId: stepRunRow.step_id },
   });
 
-  // 4. Advance: determine next step
+  // 5. Advance: determine next step
   const nextId = nextStepId(def, stepRunRow.step_id);
   if (nextId === null) {
     // Non-terminal with no next — validator should prevent this, but guard anyway
