@@ -78,4 +78,12 @@ describe('work usecases', () => {
     expect(work.show(ctx(), p.id).status).toBe('cancelled');
     expect(work.show(ctx(), 'WI-2').status).toBe('cancelled');
   });
+
+  it('rejects list with status=active (computed, not stored)', () => {
+    expect(() => work.list(ctx(), { status: 'active' })).toThrowError(/active is computed/i);
+  });
+
+  it('rejects list with invalid type filter', () => {
+    expect(() => work.list(ctx(), { type: 'widget' })).toThrowError(/type/i);
+  });
 });

@@ -80,6 +80,7 @@ export function expireStale(ctx: Ctx): { expired: number } {
 
 export interface ListArgs { agent?: string; session?: string; mine?: boolean; }
 export function list(ctx: Ctx, a: ListArgs): Page<LeaseView> {
+  if (a.mine && !a.agent) throw new ApmError('E_VALIDATION', '--mine requires --agent');
   return ctx.storage.transaction('deferred', (tx) => {
     const where = ["status='active'"]; const params: unknown[] = [];
     if (a.agent) { where.push('agent_id=?'); params.push(a.agent); }

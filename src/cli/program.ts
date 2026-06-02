@@ -246,9 +246,10 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .description('List active leases')
     .option('--agent <name>', 'filter by agent')
     .option('--session <id>', 'filter by session')
-    .action(function (this: Command, o: { agent?: string; session?: string }) {
+    .option('--mine', 'filter to caller agent (requires --agent)')
+    .action(function (this: Command, o: { agent?: string; session?: string; mine?: boolean }) {
       process.exitCode = runCommand(buildDeps(), 'lease list', (ctx) => ({
-        data: lease.list(ctx, { agent: o.agent, session: o.session }),
+        data: lease.list(ctx, { agent: o.agent, session: o.session, mine: o.mine }),
       }));
     });
 

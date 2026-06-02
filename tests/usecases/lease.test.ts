@@ -48,4 +48,41 @@ describe('lease usecases', () => {
     const held = lease.list(ctx(), { agent: 'claude' });
     expect(held.items.map((l) => l.id)).toEqual(['LEASE-1']);
   });
+
+  it('rejects --mine without --agent', () => {
+    expect(() => lease.list(ctx(), { mine: true })).toThrowError(/--mine requires --agent/i);
+  });
+
+  it('--mine + --agent returns that agent\'s leases', () => {
+    lease.acquire(ctx(), { workItem: 'WI-1', agent: 'claude', ttl: '30m' });
+    const held = lease.list(ctx(), { mine: true, agent: 'claude' });
+    expect(held.items.map((l) => l.id)).toEqual(['LEASE-1']);
+  });
+
+  it('heartbeat extends expiry', () => {
+    const before = lease.acquire(ctx(), { workItem: 'WI-1', agent: 'claude', ttl: '30m' });
+    // before.expires_at = 12:30 (30m from 12:00)
+    const after = lease.heartbeat(ctx(), before.id, '60m');
+    // after.expires_at = 13:00 (60m from 12:00)
+    expect(new Date(after.expires_at).getTime()).toBeGreaterThan(new Date(before.expires_at).getTime());
+  });
+
+  it('expireStale marks expired leases and work item reverts to stored status', () => {
+    // set item to ready, acquire with 30m ttl → expires at 12:30
+    work.update(ctx(), 'WI-1', { status: 'ready' }, 'claude');
+    lease.acquire(ctx(), { workItem: 'WI-1', agent: 'claude', ttl: '30m' });
+
+    // open a second storage on the same db with a clock set to 13:00 (after expiry)
+    const laterClock = fixedClock('2026-06-02T13:00:00.000Z');
+    const laterStorage = new SqliteStorage(join(dir, '.apm', 'apm.db'), laterClock);
+    const laterCtx = { storage: laterStorage, clock: laterClock };
+    try {
+      const result = lease.expireStale(laterCtx);
+      expect(result).toEqual({ expired: 1 });
+      // work item status should revert to stored status 'ready' (not 'active')
+      expect(work.show(laterCtx, 'WI-1').status).toBe('ready');
+    } finally {
+      laterStorage.close();
+    }
+  });
 });

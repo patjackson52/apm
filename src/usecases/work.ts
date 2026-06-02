@@ -1,7 +1,7 @@
 import type { Ctx } from '../cli/run.js';
 import { ApmError } from '../domain/errors.js';
 import { repos } from '../storage/repos.js';
-import { WORK_ITEM_TYPES, ESTIMATES, type WorkItemType, type Estimate } from '../domain/types.js';
+import { WORK_ITEM_TYPES, WORK_ITEM_STATUSES, ESTIMATES, type WorkItemType, type Estimate } from '../domain/types.js';
 import { toWorkItemView, type WorkItemView, type Page } from '../domain/entities.js';
 
 export interface CreateArgs { type: WorkItemType; title: string; description?: string; priority?: number; estimate?: Estimate; parent?: string; agent: string; }
@@ -39,6 +39,8 @@ export function show(ctx: Ctx, id: string): WorkItemView {
 
 export interface ListArgs { limit?: number; offset?: number; status?: string; type?: string; }
 export function list(ctx: Ctx, a: ListArgs = {}): Page<WorkItemView> {
+  if (a.status && !(WORK_ITEM_STATUSES as readonly string[]).includes(a.status)) throw new ApmError('E_VALIDATION', `invalid status filter: must be one of ${WORK_ITEM_STATUSES.join('|')} (active is computed from leases — use \`lease list\`)`, [{ field: 'status', problem: `must be one of ${WORK_ITEM_STATUSES.join('|')} (active is computed from leases — use \`lease list\`)`, got: a.status }]);
+  if (a.type && !(WORK_ITEM_TYPES as readonly string[]).includes(a.type)) throw new ApmError('E_VALIDATION', 'invalid type filter', [{ field: 'type', problem: `must be one of ${WORK_ITEM_TYPES.join('|')}`, got: a.type }]);
   const limit = a.limit ?? 20; const offset = a.offset ?? 0;
   return ctx.storage.transaction('deferred', (tx) => {
     const where: string[] = []; const params: unknown[] = [];
