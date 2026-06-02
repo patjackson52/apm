@@ -78,7 +78,9 @@ export function enterStep(
       type: 'human_gate',
       reason: `Human gate: ${stepDef.id}`,
       question: (stepDef as any).question ?? `Please answer: ${stepDef.id}`,
-      optionsJson: (stepDef as any).options ? JSON.stringify((stepDef as any).options) : null,
+      optionsJson: (stepDef as any).options
+        ? JSON.stringify((stepDef as any).options)
+        : JSON.stringify(['yes', 'no']),
     });
     r.workItems.setStatus(run.work_item_id, 'blocked', actor);
     tx.appendEvent({

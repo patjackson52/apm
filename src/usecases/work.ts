@@ -14,9 +14,10 @@ function view(tx: any, id: string): WorkItemView {
   const lease = tx.get("SELECT id FROM leases WHERE work_item_id=? AND status='active' AND expires_at > ?", id, tx.now()) as { id: string } | undefined;
   const activeRun = r.runs.activeForWorkItem(id);
   const artifactIds = r.artifacts.linkedRoots(id).map((root: string) => r.artifacts.currentByRoot(root)?.id).filter(Boolean) as string[];
+  const blockerIds = r.blockers.openForWorkItem(id).map((b: any) => b.id as string);
   return toWorkItemView(row, {
     dependsOn: r.links.dependsOn(id),
-    blockerIds: [],      // Plan 3 Task 8
+    blockerIds,
     artifactIds,
     activeRun: activeRun?.id ?? null,
     lease: lease?.id ?? null,
