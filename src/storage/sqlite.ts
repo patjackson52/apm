@@ -12,7 +12,7 @@ export class SqliteStorage implements Storage {
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
     this.db.pragma('busy_timeout = 5000');
-    runMigrations(this.db);
+    runMigrations(this.db, this.clock.now());
   }
 
   transaction<T>(mode: TxMode, fn: (tx: Tx) => T): T {

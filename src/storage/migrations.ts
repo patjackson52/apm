@@ -5,13 +5,13 @@ import { fileURLToPath } from 'node:url';
 const schemaSql = readFileSync(fileURLToPath(new URL('./schema.sql', import.meta.url)), 'utf8');
 
 /** Ordered migrations. Migration 1 is the full V1 schema. */
-const MIGRATIONS: Array<{ version: number; up: (db: Database.Database) => void }> = [
+const MIGRATIONS: Array<{ version: number; up: (db: Database.Database, stamp: string) => void }> = [
   {
     version: 1,
-    up: (db) => {
+    up: (db, stamp) => {
       db.exec(schemaSql);
       db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)')
-        .run(1, new Date(0).toISOString());
+        .run(1, stamp);
     },
   },
 ];
@@ -19,14 +19,15 @@ const MIGRATIONS: Array<{ version: number; up: (db: Database.Database) => void }
 export const CURRENT_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 
 /** Apply pending migrations in one transaction, gated on PRAGMA user_version. */
-export function runMigrations(db: Database.Database): void {
+export function runMigrations(db: Database.Database, now?: string): void {
+  const stamp = now ?? new Date(0).toISOString();
   db.pragma('foreign_keys = ON');
   const current = db.pragma('user_version', { simple: true }) as number;
   const pending = MIGRATIONS.filter((m) => m.version > current);
   if (pending.length === 0) return;
   const apply = db.transaction(() => {
     for (const m of pending) {
-      m.up(db);
+      m.up(db, stamp);
       db.pragma(`user_version = ${m.version}`);
     }
   });

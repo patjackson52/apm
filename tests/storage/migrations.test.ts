@@ -27,4 +27,12 @@ describe('migrations', () => {
     expect(rows.c).toBe(0);
     db.close();
   });
+
+  it('records applied_at from the provided timestamp', () => {
+    const db = new Database(':memory:');
+    runMigrations(db, '2026-06-02T12:00:00.000Z');
+    const row = db.prepare('SELECT applied_at FROM schema_migrations WHERE version=1').get() as any;
+    expect(row.applied_at).toBe('2026-06-02T12:00:00.000Z');
+    db.close();
+  });
 });
