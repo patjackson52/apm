@@ -23,7 +23,7 @@ export function buildContract(step: StepDef, requiredContext: ContextRef[], ids:
         : [{ cmd: 'apm step complete', args: { run: ids.run, step: step.id } }];
       // extra outputs beyond the first must be created separately
       const extra = types.slice(1).map((t) => `apm artifact create --work-item ${ids.workItem} --type ${t} --title <t> --body-file <path> --agent <agent>`);
-      return { allowed_action: action, do_not: doNotFor(step), when_done: [...extra, ...when_done], next_actions };
+      return { allowed_action: action, do_not: doNotFor(step), when_done: [...when_done, ...extra], next_actions };
     }
     case 'review_gate': {
       const roles = step.reviewers ?? [];
