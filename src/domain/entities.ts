@@ -74,3 +74,38 @@ export function toArtifactView(row: any): ArtifactView {
     created_by: row.created_by ?? null, created_at: row.created_at,
   };
 }
+
+export interface DecisionView {
+  id: string; work_item: string | null; question: string; options: string[];
+  recommendation: string | null; confidence: number | null; decision: string | null;
+  category: string | null; status: string; artifact_id: string | null;
+  created_at: string; decided_at: string | null;
+}
+export function toDecisionView(row: any): DecisionView {
+  return {
+    id: row.id, work_item: row.work_item_id ?? null, question: row.question,
+    options: row.options_json ? JSON.parse(row.options_json) : [],
+    recommendation: row.recommendation ?? null, confidence: row.confidence ?? null,
+    decision: row.decision ?? null, category: row.category ?? null,
+    status: row.status, artifact_id: row.artifact_id ?? null,
+    created_at: row.created_at, decided_at: row.decided_at ?? null,
+  };
+}
+
+export interface BlockerView {
+  id: string; work_item: string; type: string; reason: string; status: string;
+  question: string | null; options: string[]; resolution: string | null;
+  answer: string | null; choice: string | null; answered_by: string | null;
+  answered_at: string | null; resolved_at: string | null; created_at: string;
+}
+export function toBlockerView(row: any): BlockerView {
+  return {
+    id: row.id, work_item: row.work_item_id, type: row.blocker_type, reason: row.reason,
+    status: row.status, question: row.question ?? null,
+    options: row.options_json ? JSON.parse(row.options_json) : [],
+    resolution: row.resolution ?? null, answer: row.answer ?? null,
+    choice: row.choice ?? null, answered_by: row.answered_by ?? null,
+    answered_at: row.answered_at ?? null, resolved_at: row.resolved_at ?? null,
+    created_at: row.created_at,
+  };
+}
