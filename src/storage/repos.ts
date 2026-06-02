@@ -127,7 +127,7 @@ export function repos(tx: Tx) {
     },
     stepRuns: {
       insertPending(runId: string, stepId: string, parent?: string | null, role?: string | null, round?: number): string {
-        const id = tx.allocateId('WR'); // reuse WR prefix for step runs (no separate prefix in schema)
+        const id = tx.allocateId('SR');
         tx.run(
           "INSERT INTO workflow_step_runs (id, workflow_run_id, step_id, parent_step_run_id, role, status, review_round, created_at) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)",
           id, runId, stepId, parent ?? null, role ?? null, round ?? 1, now,

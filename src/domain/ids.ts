@@ -6,6 +6,7 @@ export const ID_PREFIXES = {
   adr: 'ADR',
   blocker: 'BLK',
   workflowRun: 'WR',
+  stepRun: 'SR',
   lease: 'LEASE',
   session: 'S',
   workflowDefinition: 'WD',
