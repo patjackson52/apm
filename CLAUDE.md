@@ -18,6 +18,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Sessions: `apm session start --agent <a>` · `session show <id>` · `session summarize <id> --body <s>` · `session end <id>`
 - Leases: `apm lease acquire <wi> --agent <a> --ttl 30m` · `lease heartbeat <id> --ttl 30m` · `lease release <id>` · `lease expire-stale` · `lease list --agent <a>`
 - Global: `-o, --format human|json|yaml|agent` (default human at TTY, json piped; `APM_FORMAT` to pin)
+- Workflows: `apm workflow list` · `workflow show <nameOrId>` · `workflow attach <wi> --workflow <name> --agent <a>` · `workflow register --file <path>` · `workflow runs <wi>`
+- Runs: `apm run cancel <runId>`
+- Steps: `apm step complete <run> <step> --agent <a> [--artifact <id> | --artifact-type <t> --body-file <f>]` · `step fail <run> <step> --reason <r> --agent <a>` · `step retry <run> <step> --agent <a>` · `step review <run> <step> --reviewer <role> --verdict <v> --agent <a> [--artifact <id>]`
+- Artifacts: `apm artifact create --work-item <wi> --type <t> --title <s> --body-file <f> --agent <a>` · `artifact show <id>` · `artifact revise <id> --body-file <f> --agent <a>` · `artifact list --work-item <wi>` · `artifact submit <id>` · `artifact approve <id>` · `artifact archive <id>`
+- Decisions: `apm decision create --work-item <wi> --question <q> --options <csv> --recommendation <r> --confidence <n> --category <c> --agent <a>` · `decision accept <id> --choice <c> --agent <a>` · `decision reject <id> --agent <a>`
+- ADRs: `apm adr create-from-decision <decId> --agent <a>` · `adr list` · `adr show <id>`
+- Blockers: `apm blocker create <wi> --type <t> --reason <r> --agent <a>` · `blocker resolve <id> --resolution <r> --agent <a>`
+- Gates: `apm gate list [--work-item <wi>]` · `gate answer <blockerId> --choice <c> [--note <n>] --agent <a>`
+- Policy: `apm policy create --scope-type <t> [--scope-id <id>] --policy-file <f>` · `policy list` · `policy show [--work-item <wi>]`
+- Prompts: `apm prompt create --name <n> --body-file <f>` · `prompt list` · `prompt show <name>`
+- Work (extended): `apm work current <id>` · `work blockers <id>`
 
 ## Engineering invariants (V1)
 

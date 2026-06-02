@@ -56,9 +56,11 @@ export interface RunView {
   current_step: string | null; started_at: string; completed_at: string | null;
 }
 export function toRunView(row: any, workflowName: string): RunView {
+  // Terminal/cancelled runs have no active current step
+  const isTerminal = row.status === 'completed' || row.status === 'cancelled';
   return {
     id: row.id, work_item: row.work_item_id, workflow: workflowName,
-    status: row.status, current_step: row.current_step_id ?? null,
+    status: row.status, current_step: isTerminal ? null : (row.current_step_id ?? null),
     started_at: row.started_at, completed_at: row.completed_at ?? null,
   };
 }
