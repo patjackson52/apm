@@ -36,6 +36,9 @@ CREATE TABLE work_items (
   FOREIGN KEY(created_by) REFERENCES agents(id) ON DELETE RESTRICT
 );
 
+CREATE INDEX ix_wi_status ON work_items(status);
+CREATE INDEX ix_wi_parent ON work_items(parent_id);
+
 CREATE TABLE work_item_links (
   id TEXT PRIMARY KEY,
   source_work_item_id TEXT NOT NULL,
@@ -93,6 +96,11 @@ BEGIN
   SELECT RAISE(ABORT, 'workflow_definition is immutable');
 END;
 
+CREATE TRIGGER wd_no_delete BEFORE DELETE ON workflow_definitions
+BEGIN
+  SELECT RAISE(ABORT, 'workflow_definition is immutable');
+END;
+
 CREATE TABLE prompt_definitions (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -120,7 +128,7 @@ CREATE TABLE artifacts (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL,
   title TEXT NOT NULL,
-  version INTEGER NOT NULL,
+  version INTEGER NOT NULL CHECK (version > 0),
   status TEXT NOT NULL CHECK (status IN ('draft','review','approved','superseded','archived')),
   body TEXT,
   metadata_json TEXT,
@@ -140,7 +148,8 @@ CREATE TABLE work_item_artifacts (
   root_artifact_id TEXT NOT NULL,
   relation_type TEXT NOT NULL,
   PRIMARY KEY(work_item_id, root_artifact_id),
-  FOREIGN KEY(work_item_id) REFERENCES work_items(id) ON DELETE RESTRICT
+  FOREIGN KEY(work_item_id) REFERENCES work_items(id) ON DELETE RESTRICT,
+  FOREIGN KEY(root_artifact_id) REFERENCES artifacts(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE workflow_step_runs (
@@ -163,7 +172,8 @@ CREATE TABLE workflow_step_runs (
   FOREIGN KEY(prompt_definition_id) REFERENCES prompt_definitions(id) ON DELETE RESTRICT,
   FOREIGN KEY(output_artifact_id) REFERENCES artifacts(id) ON DELETE RESTRICT,
   CHECK ((parent_step_run_id IS NULL) = (role IS NULL)),
-  CHECK (parent_step_run_id IS NULL OR ((status='completed') = (verdict IS NOT NULL)))
+  CHECK (parent_step_run_id IS NULL OR ((status='completed') = (verdict IS NOT NULL))),
+  CHECK (verdict IS NULL OR parent_step_run_id IS NOT NULL)
 );
 CREATE INDEX ix_steprun_run ON workflow_step_runs(workflow_run_id, status);
 CREATE UNIQUE INDEX ux_live_reviewer ON workflow_step_runs(workflow_run_id, parent_step_run_id, role)

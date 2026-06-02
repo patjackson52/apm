@@ -62,4 +62,43 @@ describe('schema', () => {
     expect(() => db.exec("UPDATE workflow_definitions SET status='deprecated' WHERE id='WD-1'")).not.toThrow();
     db.close();
   });
+
+  it('blocks DELETE on workflow_definitions', () => {
+    const db = freshDb();
+    db.exec("INSERT INTO workflow_definitions (id,name,version,definition_json,status,created_at) VALUES ('WD-1','feature_delivery',1,'{}','active','2026-06-02T00:00:00.000Z')");
+    expect(() => db.exec("DELETE FROM workflow_definitions WHERE id='WD-1'")).toThrow(/immutable/i);
+    db.close();
+  });
+
+  it('blocks verdict on main-path step run (parent_step_run_id IS NULL)', () => {
+    const db = freshDb();
+    db.exec("INSERT INTO agents (id,name,type,created_at) VALUES ('A','claude','agent','2026-06-02T00:00:00.000Z')");
+    db.exec("INSERT INTO work_items (id,type,title,status,created_at,updated_at) VALUES ('WI-1','feature','t','ready','2026-06-02T00:00:00.000Z','2026-06-02T00:00:00.000Z')");
+    db.exec("INSERT INTO workflow_definitions (id,name,version,definition_json,status,created_at) VALUES ('WD-1','flow',1,'{}','active','2026-06-02T00:00:00.000Z')");
+    db.exec("INSERT INTO workflow_runs (id,work_item_id,workflow_definition_id,status) VALUES ('WR-1','WI-1','WD-1','running')");
+    const bad = () => db.exec(
+      "INSERT INTO workflow_step_runs (id,workflow_run_id,step_id,parent_step_run_id,role,status,verdict,created_at) VALUES ('SR-1','WR-1','step-1',NULL,NULL,'pending','pass','2026-06-02T00:00:00.000Z')"
+    );
+    expect(bad).toThrow(/CHECK/i);
+    db.close();
+  });
+
+  it('blocks artifact with version 0', () => {
+    const db = freshDb();
+    const bad = () => db.exec(
+      "INSERT INTO artifacts (id,type,title,version,status,root_artifact_id,created_at) VALUES ('ART-1','doc','title',0,'draft','ART-1','2026-06-02T00:00:00.000Z')"
+    );
+    expect(bad).toThrow(/CHECK/i);
+    db.close();
+  });
+
+  it('has ix_wi_status and ix_wi_parent indexes', () => {
+    const db = freshDb();
+    const names = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='index' AND name IN ('ix_wi_status','ix_wi_parent')"
+    ).all().map((r: any) => r.name);
+    expect(names).toContain('ix_wi_status');
+    expect(names).toContain('ix_wi_parent');
+    db.close();
+  });
 });
