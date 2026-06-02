@@ -4,9 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project State
 
-**Spec-stage. No code yet.** This repo currently holds only design specs under `docs/` (an Obsidian vault — `.obsidian/` is editor config). There is no source tree, build system, package manager, test runner, or chosen implementation language. Do not invent build/lint/test commands until the implementation language is chosen and scaffolded — and update this file when it is.
+**Implementation underway (V1).** TypeScript/Node CLI. Specs in `docs/`; design spec in `docs/superpowers/specs/2026-06-02-apm-v1-cli-design.md`; implementation plans in `docs/superpowers/plans/`. `.obsidian/` is editor config; `.apm/` (runtime db) is gitignored.
 
-Not yet a git repo. Initialize before first commit.
+## Commands
+
+- Install: `npm install`
+- Test (all): `npm test`  — single file: `npx vitest run tests/path/to/file.test.ts`  — watch: `npm run test:watch`
+- Typecheck: `npm run typecheck`
+- Build: `npm run build` (emits `dist/`, binary at `dist/bin/apm.js`)
+- Run without building: `npx tsx src/bin/apm.ts <args>` (or `npm run apm -- <args>`)
+- Init a project: `apm init` (creates `.apm/apm.db` + `.apm/config.yaml`)
+
+## Engineering invariants (V1)
+
+- Storage is reached only through `Storage.transaction(mode, fn)`; writes use `'immediate'`, reads `'deferred'` and release immediately.
+- Domain code is pure — "now" is injected via `Clock`, never `Date.now()`.
+- Every mutation allocates ids from the `sequences` table and appends an `events` row in the same transaction.
+- Work-item `active` is computed from a live lease, never stored.
 
 ## What APM Is
 
