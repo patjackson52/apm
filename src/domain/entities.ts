@@ -51,6 +51,18 @@ export function toLeaseView(row: any): LeaseView {
   };
 }
 
+export interface RunView {
+  id: string; work_item: string; workflow: string; status: string;
+  current_step: string | null; started_at: string; completed_at: string | null;
+}
+export function toRunView(row: any, workflowName: string): RunView {
+  return {
+    id: row.id, work_item: row.work_item_id, workflow: workflowName,
+    status: row.status, current_step: row.current_step_id ?? null,
+    started_at: row.started_at, completed_at: row.completed_at ?? null,
+  };
+}
+
 export interface ArtifactView {
   id: string; type: ArtifactType; title: string; version: number; status: ArtifactStatus;
   root: string; supersedes: string | null; created_by: string | null; created_at: string;
