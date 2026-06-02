@@ -18,7 +18,7 @@ export interface NextArgs {
 }
 
 export type NextResult =
-  | { status: 'dispatched'; data: any; session?: string }
+  | { status: 'dispatched'; data: any; session?: string; stale?: boolean }
   | { status: 'idle'; reason: string; data: { status: 'idle'; reason: string; retry_after: number }; session?: string }
   | { status: 'drained'; data: { status: 'drained' }; session?: string };
 
@@ -231,6 +231,7 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
       work_item: workItemId,
       run: runRow.id,
       step: { id: stepDef.id, type: stepDef.type },
+      prompt_id: stepDef.prompt_id ?? null,
       allowed_action: contract.allowed_action,
       required_context: requiredContext,
       do_not: contract.do_not,
@@ -240,10 +241,8 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
       retry_after: null,
     };
 
-    if (!args.acquire) {
-      data.stale = true;
-    }
+    const stale = !args.acquire;
 
-    return { status: 'dispatched', data, session };
+    return { status: 'dispatched', data, session, stale };
   });
 }

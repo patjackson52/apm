@@ -72,6 +72,34 @@ describe('cli command groups', () => {
     expect(code).toBe(0);
   });
 
+  it('apm next (no --acquire) on dispatched step → meta.stale === true, no data.stale', () => {
+    const storage = new SqliteStorage(join(dir, '.apm', 'apm.db'), clock);
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'F2', agent: 'claude' });
+    wf.attachRun(ctx, { workItem: wi.id, workflow: 'feature_delivery', agent: 'claude' });
+    storage.close();
+
+    const { out } = runCli(['next', '--agent', 'claude']);
+    const parsed = JSON.parse(out);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.meta.stale).toBe(true);
+    expect(parsed.data.stale).toBeUndefined();
+  });
+
+  it('apm next --acquire on dispatched step → no meta.stale, data.lease set', () => {
+    const storage = new SqliteStorage(join(dir, '.apm', 'apm.db'), clock);
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'F3', agent: 'claude' });
+    wf.attachRun(ctx, { workItem: wi.id, workflow: 'feature_delivery', agent: 'claude' });
+    storage.close();
+
+    const { out } = runCli(['next', '--agent', 'claude', '--acquire']);
+    const parsed = JSON.parse(out);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.meta.stale).toBeUndefined();
+    expect(parsed.data.lease).toBeTruthy();
+  });
+
   it('apm next --format agent on empty project prints status=drained and exits 3', () => {
     const lines: string[] = [];
     const program = buildProgram({ clock, out: (s) => lines.push(s) });

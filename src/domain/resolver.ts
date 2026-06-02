@@ -49,7 +49,6 @@ export function selectCandidate(candidates: Candidate[], caller: Caller, now: st
   if (sawDeps) return { status: 'idle', reason: 'deps_pending', retryAfter: 30 };
   if (sawLeased) return { status: 'idle', reason: 'all_leased', retryAfter: 30 };
   if (sawCaps) return { status: 'idle', reason: 'capability_mismatch', retryAfter: 60 };
-  if (sawHuman && !sawPending) return { status: 'idle', reason: 'awaiting_human', retryAfter: 0 };
   if (sawHuman) return { status: 'idle', reason: 'awaiting_human', retryAfter: 0 };
   return { status: 'drained' };
 }

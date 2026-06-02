@@ -69,6 +69,12 @@ function renderAgent(envelope: Envelope<any>): string {
     lines.push('CURRENT_STEP:');
     lines.push(`${d.step.id} (${d.step.type})`);
 
+    if (d.prompt_id != null) {
+      lines.push('');
+      lines.push('PROMPT:');
+      lines.push(d.prompt_id);
+    }
+
     lines.push('');
     lines.push('ALLOWED_ACTION:');
     lines.push(d.allowed_action ?? '');

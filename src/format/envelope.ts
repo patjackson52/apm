@@ -1,7 +1,7 @@
 import type { Clock } from '../domain/clock.js';
 import { ApmError } from '../domain/errors.js';
 
-export interface Meta { api_version: 1; command: string; ts: string; actor_session?: string; note?: string; }
+export interface Meta { api_version: 1; command: string; ts: string; actor_session?: string; note?: string; stale?: boolean; [key: string]: unknown; }
 export interface ErrorBody { code: string; message: string; retryable: boolean; issues?: { field: string; problem: string; got?: unknown }[]; }
 export interface Envelope<T> { ok: boolean; data: T | null; error: ErrorBody | null; meta: Meta; }
 

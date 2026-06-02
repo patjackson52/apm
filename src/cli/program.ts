@@ -703,7 +703,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
       let nextResult: next.NextResult | undefined;
       const rc = runCommand(buildDeps(), 'next', (ctx) => {
         nextResult = next.next(ctx, args);
-        return { data: nextResult.data, session: nextResult.session };
+        const stale = nextResult.status === 'dispatched' && nextResult.stale ? { stale: true } : undefined;
+        return { data: nextResult.data, session: nextResult.session, meta: stale };
       });
       // rc=0 means render succeeded; override exit code with semantic next code
       process.exitCode = rc === 0 ? (nextResult ? next.nextExitCode(nextResult) : 0) : rc;
