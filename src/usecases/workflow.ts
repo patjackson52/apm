@@ -1,12 +1,15 @@
 import type { Ctx } from '../cli/run.js';
 import { ApmError } from '../domain/errors.js';
 import { repos } from '../storage/repos.js';
-import { parseWorkflow, validateWorkflow, firstStep, type WorkflowDef } from '../domain/workflow.js';
+import {
+  parseWorkflow, validateWorkflow, firstStep, layoutSteps, edgesOf, type WorkflowDef,
+} from '../domain/workflow.js';
 import { enterStep } from '../domain/advance.js';
-import { toRunView, type RunView } from '../domain/entities.js';
+import { toRunView, type RunView, type WorkflowDefView } from '../domain/entities.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
+/** Lean summary used by `list` (no steps/edges — keeps list payloads small). */
 function defToView(row: any) {
   return {
     id: row.id,
@@ -14,6 +17,21 @@ function defToView(row: any) {
     version: row.version,
     status: row.status,
     created_at: row.created_at,
+  };
+}
+
+/** Full view used by `show` — includes laid-out steps + derived edges for the graph. */
+function defToFullView(row: any): WorkflowDefView {
+  const def: WorkflowDef = JSON.parse(row.definition_json);
+  return {
+    id: row.id,
+    name: row.name,
+    version: row.version,
+    status: row.status,
+    created_at: row.created_at,
+    applies_to: def.applies_to,
+    steps: layoutSteps(def),
+    edges: edgesOf(def),
   };
 }
 
@@ -33,7 +51,7 @@ export function show(ctx: Ctx, nameOrId: string) {
     const r = repos(tx);
     const row = r.defs.byId(nameOrId) ?? r.defs.active(nameOrId);
     if (!row) throw new ApmError('E_NOT_FOUND', `workflow ${nameOrId} not found`);
-    return defToView(row);
+    return defToFullView(row);
   });
 }
 
