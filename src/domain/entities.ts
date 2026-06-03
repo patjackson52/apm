@@ -1,5 +1,6 @@
 import type {
   WorkItemType, WorkItemStatus, Estimate, SessionStatus, LeaseStatus, ArtifactStatus, ArtifactType,
+  StepRunStatus, ReviewVerdict,
 } from './types.js';
 import type { StepDef } from './workflow.js';
 
@@ -121,5 +122,38 @@ export function toBlockerView(row: any): BlockerView {
     choice: row.choice ?? null, answered_by: row.answered_by ?? null,
     answered_at: row.answered_at ?? null, resolved_at: row.resolved_at ?? null,
     created_at: row.created_at,
+  };
+}
+
+/** A workflow step-run row projected for reads (the M3 run-state overlay). */
+export interface StepRunView {
+  id: string;
+  run_id: string;
+  step_id: string;
+  parent_step_run_id: string | null;
+  role: string | null;
+  status: StepRunStatus;
+  verdict: ReviewVerdict | null;
+  review_round: number;
+  started_at: string | null;
+  completed_at: string | null;
+  output_artifact_id: string | null;
+  failure_reason: string | null;
+}
+
+export function toStepRunView(row: any): StepRunView {
+  return {
+    id: row.id,
+    run_id: row.workflow_run_id,
+    step_id: row.step_id,
+    parent_step_run_id: row.parent_step_run_id ?? null,
+    role: row.role ?? null,
+    status: row.status,
+    verdict: row.verdict ?? null,
+    review_round: row.review_round,
+    started_at: row.started_at ?? null,
+    completed_at: row.completed_at ?? null,
+    output_artifact_id: row.output_artifact_id ?? null,
+    failure_reason: row.failure_reason ?? null,
   };
 }

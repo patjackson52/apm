@@ -146,6 +146,9 @@ export function repos(tx: Tx) {
       reviewerChildren(parentId: string): any[] {
         return tx.all('SELECT * FROM workflow_step_runs WHERE parent_step_run_id=? ORDER BY id', parentId);
       },
+      listForRun(runId: string): any[] {
+        return tx.all('SELECT * FROM workflow_step_runs WHERE workflow_run_id=? ORDER BY id', runId);
+      },
       setStatus(id: string, status: string, fields?: Record<string, unknown>) {
         const extra = fields ?? {};
         const cols = Object.keys(extra);
