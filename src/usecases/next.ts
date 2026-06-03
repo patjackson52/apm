@@ -17,10 +17,15 @@ export interface NextArgs {
   ttl?: string;
 }
 
+/** Why the queue is empty + a snapshot of the backlog, so callers can tell
+ *  "project complete" from "work planned but not yet activated". */
+export interface DrainCounts { draft: number; ready: number; active: number; blocked: number; completed: number; cancelled: number; running_runs: number; }
+export type DrainReason = 'complete' | 'backlog';
+
 export type NextResult =
   | { status: 'dispatched'; data: any; session?: string; stale?: boolean }
   | { status: 'idle'; reason: string; data: { status: 'idle'; reason: string; retry_after: number }; session?: string }
-  | { status: 'drained'; data: { status: 'drained' }; session?: string };
+  | { status: 'drained'; reason: DrainReason; counts: DrainCounts; data: { status: 'drained'; reason: DrainReason; counts: DrainCounts }; session?: string };
 
 export function nextExitCode(r: NextResult): number {
   if (r.status === 'dispatched') return 0;
@@ -46,6 +51,23 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
   return ctx.storage.transaction(txMode, (tx) => {
     const r = repos(tx);
     const now = tx.now();
+
+    // Drain diagnostics: snapshot the backlog + classify why the queue is empty.
+    // Only logs an event when acquiring (immediate tx); peeks run in a deferred/read tx.
+    const buildDrained = (): NextResult => {
+      const byStatus = tx.all<{ status: string; c: number }>('SELECT status, COUNT(*) c FROM work_items GROUP BY status');
+      const at = (s: string) => byStatus.find((row) => row.status === s)?.c ?? 0;
+      const running_runs = tx.get<{ c: number }>("SELECT COUNT(*) c FROM workflow_runs WHERE status='running'")?.c ?? 0;
+      const counts: DrainCounts = {
+        draft: at('draft'), ready: at('ready'), active: at('active'), blocked: at('blocked'),
+        completed: at('completed'), cancelled: at('cancelled'), running_runs,
+      };
+      const reason: DrainReason = (counts.draft + counts.ready + counts.active + counts.blocked) > 0 ? 'backlog' : 'complete';
+      if (args.acquire) {
+        tx.appendEvent({ actorId: args.agent, eventType: 'next.drained', entityType: 'agent', entityId: args.agent, payload: { reason, counts } });
+      }
+      return { status: 'drained', reason, counts, data: { status: 'drained', reason, counts }, session };
+    };
 
     // (a) acquire only: lazy-heal stale active leases (never the caller's own)
     if (args.acquire) {
@@ -138,7 +160,7 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
     const res = selectCandidate(candidates, caller, now);
 
     if (res.status === 'drained') {
-      return { status: 'drained', data: { status: 'drained' }, session };
+      return buildDrained();
     }
 
     if (res.status === 'idle') {
@@ -158,23 +180,23 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
     )[0];
     if (!runRow) {
       // Should not happen — candidate was just built from running runs
-      return { status: 'drained', data: { status: 'drained' }, session };
+      return buildDrained();
     }
 
     const mainPending = r.stepRuns.mainPending(runRow.id);
     if (!mainPending) {
-      return { status: 'drained', data: { status: 'drained' }, session };
+      return buildDrained();
     }
 
     const defRow = r.defs.byId(runRow.workflow_definition_id);
     if (!defRow) {
-      return { status: 'drained', data: { status: 'drained' }, session };
+      return buildDrained();
     }
 
     const def = JSON.parse(defRow.definition_json);
     const stepDef = stepById(def, mainPending.step_id);
     if (!stepDef) {
-      return { status: 'drained', data: { status: 'drained' }, session };
+      return buildDrained();
     }
 
     // Required context: current artifacts for each required artifact type

@@ -109,7 +109,8 @@ describe('cli command groups', () => {
     process.exitCode = orig;
 
     const out = lines.join('\n');
-    expect(out.trim()).toBe('status=drained');
+    // enriched drain: empty project => reason=complete + zeroed counts (WI rec #1)
+    expect(out.trim()).toBe('status=drained reason=complete counts=draft:0,ready:0,active:0,blocked:0,running_runs:0');
     expect(code).toBe(3);
   });
 
