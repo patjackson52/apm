@@ -32,4 +32,16 @@ describe('Mermaid', () => {
     expect(getByText('BOOM not a diagram')).toBeTruthy();
     expect(container.querySelector('script')).toBeNull();
   });
+
+  it('fires onReady with the sanitized svg on success, not on fallback', async () => {
+    const ok = vi.fn();
+    const { rerender } = render(<Mermaid chart="graph TD; A-->B" onReady={ok} />);
+    await waitFor(() => expect(ok).toHaveBeenCalledTimes(1));
+    expect(ok.mock.calls[0]![0]).toMatch(/<svg/i);
+    const bad = vi.fn();
+    rerender(<Mermaid chart="BOOM not a diagram" onReady={bad} />);
+    await waitFor(() => {}, { timeout: 50 }).catch(() => {});
+    expect(bad).not.toHaveBeenCalled();
+  });
+
 });

@@ -8,3 +8,8 @@
 .prose :global(a) { color: var(--accent); }
 .prose :global(table) { border-collapse: collapse; }
 .prose :global(th), .prose :global(td) { border: 1px solid var(--border); padding: 4px 8px; }
+
+.headingRow { display: flex; align-items: center; gap: 8px; }
+.headingRow > :first-child { margin: 0; }
+.blockWrap { position: relative; }
+.blockActions { display: inline-flex; gap: 6px; margin: 4px 0; }

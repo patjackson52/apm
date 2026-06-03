@@ -14,7 +14,7 @@ type State = { kind: 'pending' } | { kind: 'ok'; svg: string } | { kind: 'error'
  * dangerouslySetInnerHTML. Any parse error / empty sanitized output falls back
  * to the raw fenced source in a <pre> (auto-escaped) — never partial HTML.
  */
-export function Mermaid({ chart }: { chart: string }) {
+export function Mermaid({ chart, onReady }: { chart: string; onReady?: (svg: string) => void }) {
   const rawId = useId();
   const [state, setState] = useState<State>({ kind: 'pending' });
 
@@ -33,7 +33,12 @@ export function Mermaid({ chart }: { chart: string }) {
         const { svg } = await mermaid.render(id, chart);
         const safe = sanitizeSvg(svg);
         if (cancelled) return;
-        setState(safe ? { kind: 'ok', svg: safe } : { kind: 'error' });
+        if (safe) {
+          setState({ kind: 'ok', svg: safe });
+          onReady?.(safe);
+        } else {
+          setState({ kind: 'error' });
+        }
       } catch {
         if (!cancelled) setState({ kind: 'error' });
       }
@@ -41,7 +46,7 @@ export function Mermaid({ chart }: { chart: string }) {
     return () => {
       cancelled = true;
     };
-  }, [chart, rawId]);
+  }, [chart, rawId, onReady]);
 
   if (state.kind === 'ok') {
     return <div role="img" dangerouslySetInnerHTML={{ __html: state.svg }} />;
