@@ -8,6 +8,7 @@ import { fixedClock } from '../../src/domain/clock.js';
 import * as work from '../../src/usecases/work.js';
 import * as workflow from '../../src/usecases/workflow.js';
 import * as step from '../../src/usecases/step.js';
+import * as next from '../../src/usecases/next.js';
 import { reopenReviewer } from '../../src/domain/advance.js';
 
 let dir: string; let storage: SqliteStorage;
@@ -185,5 +186,116 @@ describe('step.review — all pass advances', () => {
 
     expect(() => step.review(ctx(), { run: run.id, step: 'gate', reviewer: 'bogus_role', verdict: 'pass', agent: 'claude' }))
       .toThrowError(/E_VALIDATION|not valid/i);
+  });
+});
+
+
+// A workflow whose review_gate re-opens its source step on reject (self-heal)
+const REVIEW_REOPEN_YAML = `
+id: review_reopen
+version: 1
+name: review_reopen
+applies_to: [feature]
+status: active
+steps:
+  - id: prep
+    type: agent_prompt
+    next: [gate]
+  - id: gate
+    type: review_gate
+    reviewers: [arch, security]
+    pass_policy: all_required
+    on_reject: prep
+    next: [finish]
+  - id: finish
+    type: terminal
+`;
+
+describe('step.review — on_reject self-heal', () => {
+  const advanceToGate = (runId: string) => step.complete(ctx(), { run: runId, step: 'prep', agent: 'claude' });
+  const rejectCycle = (runId: string) => {
+    step.review(ctx(), { run: runId, step: 'gate', reviewer: 'arch', verdict: 'reject', agent: 'claude' });
+    step.review(ctx(), { run: runId, step: 'gate', reviewer: 'security', verdict: 'pass', agent: 'claude' });
+  };
+
+  it('reject re-opens the on_reject step (no block) and next re-dispatches it', () => {
+    const { wi, run } = setupWorkflow(REVIEW_REOPEN_YAML);
+    advanceToGate(run.id);
+    rejectCycle(run.id);
+
+    expect(work.show(ctx(), wi.id).status).not.toBe('blocked');
+    const cur = storage.transaction('deferred', (tx) =>
+      tx.get<{ current_step_id: string }>('SELECT current_step_id FROM workflow_runs WHERE id=?', run.id));
+    expect(cur!.current_step_id).toBe('prep');
+    const openBlk = storage.transaction('deferred', (tx) =>
+      tx.all("SELECT id FROM blockers WHERE work_item_id=? AND blocker_type='review_disagreement' AND status='open'", wi.id));
+    expect(openBlk).toHaveLength(0);
+    // the rejected gate main step is marked failed (so mainPending returns prep, not the stale gate)
+    const n = next.next(ctx(), { agent: 'claude', capabilities: [], match: 'any' });
+    expect(n.status).toBe('dispatched');
+    expect(n.data.step.id).toBe('prep');
+  });
+
+  it('after re-open, redoing the source step returns to a fresh review_gate that can pass → advances', () => {
+    const { run } = setupWorkflow(REVIEW_REOPEN_YAML);
+    advanceToGate(run.id);
+    rejectCycle(run.id);             // reject #1 → re-open prep
+    advanceToGate(run.id);           // redo prep → fresh gate
+    step.review(ctx(), { run: run.id, step: 'gate', reviewer: 'arch', verdict: 'pass', agent: 'claude' });
+    const r = step.review(ctx(), { run: run.id, step: 'gate', reviewer: 'security', verdict: 'pass', agent: 'claude' });
+    expect(r.status).toBe('completed'); // gate passed → finish (terminal) → run completed
+  });
+
+  it('falls back to blocking after the max revise rounds (no infinite loop)', () => {
+    const { wi, run } = setupWorkflow(REVIEW_REOPEN_YAML);
+    advanceToGate(run.id);
+    rejectCycle(run.id); advanceToGate(run.id);  // attempt 2
+    rejectCycle(run.id); advanceToGate(run.id);  // attempt 3
+    rejectCycle(run.id);                          // guard → block
+    expect(work.show(ctx(), wi.id).status).toBe('blocked');
+    const openBlk = storage.transaction('deferred', (tx) =>
+      tx.all("SELECT id FROM blockers WHERE work_item_id=? AND blocker_type='review_disagreement' AND status='open'", wi.id));
+    expect(openBlk.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('step.revise — manual review-reject recovery', () => {
+  const advanceToGate = (runId: string) => step.complete(ctx(), { run: runId, step: 'prep', agent: 'claude' });
+  const rejectCycle = (runId: string) => {
+    step.review(ctx(), { run: runId, step: 'gate', reviewer: 'arch', verdict: 'reject', agent: 'claude' });
+    step.review(ctx(), { run: runId, step: 'gate', reviewer: 'security', verdict: 'pass', agent: 'claude' });
+  };
+
+  it('re-opens the on_reject source step and makes it dispatchable again', () => {
+    const { wi, run } = setupWorkflow(REVIEW_REOPEN_YAML);
+    advanceToGate(run.id); // at gate
+    const r = step.revise(ctx(), { run: run.id, step: 'gate', agent: 'claude' });
+    expect(r.current_step).toBe('prep');
+    expect(work.show(ctx(), wi.id).status).not.toBe('blocked');
+    const n = next.next(ctx(), { agent: 'claude', capabilities: [], match: 'any' });
+    expect(n.status).toBe('dispatched');
+    expect(n.data.step.id).toBe('prep');
+  });
+
+  it('resolves an open review_disagreement blocker and unblocks the work item', () => {
+    const { wi, run } = setupWorkflow(REVIEW_REOPEN_YAML);
+    // drive to the guard-block (3 reject cycles)
+    advanceToGate(run.id);
+    rejectCycle(run.id); advanceToGate(run.id);
+    rejectCycle(run.id); advanceToGate(run.id);
+    rejectCycle(run.id); // guard → blocked + review_disagreement
+    expect(work.show(ctx(), wi.id).status).toBe('blocked');
+
+    step.revise(ctx(), { run: run.id, step: 'gate', agent: 'claude' });
+    expect(work.show(ctx(), wi.id).status).toBe('ready');
+    const openBlk = storage.transaction('deferred', (tx) =>
+      tx.all("SELECT id FROM blockers WHERE work_item_id=? AND blocker_type='review_disagreement' AND status='open'", wi.id));
+    expect(openBlk).toHaveLength(0);
+  });
+
+  it('errors on a review_gate without on_reject', () => {
+    const { run } = setupWorkflow(REVIEW_YAML);
+    step.complete(ctx(), { run: run.id, step: 'prep', agent: 'claude' }); // at gate (no on_reject)
+    expect(() => step.revise(ctx(), { run: run.id, step: 'gate', agent: 'claude' })).toThrow(/no on_reject/);
   });
 });

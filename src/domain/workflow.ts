@@ -12,6 +12,8 @@ export interface StepDef {
   pass_policy?: 'all_required';
   action?: string;
   may_create_work_items?: boolean;
+  /** review_gate only: on reject, re-open this step (self-heal → revise → re-review). */
+  on_reject?: string;
   next?: string[];
 }
 export interface WorkflowDef {
@@ -34,6 +36,10 @@ export function validateWorkflow(def: WorkflowDef): void {
     if (s.next && s.next.length > 1) throw new ApmError('E_VALIDATION', `step ${s.id}: V1 is linear (single next target)`);
     for (const n of s.next ?? []) if (!ids.has(n)) throw new ApmError('E_VALIDATION', `step ${s.id}: next points at unknown step ${n}`);
     if (s.type === 'review_gate' && !(s.reviewers?.length)) throw new ApmError('E_VALIDATION', `review_gate ${s.id} needs reviewers`);
+    if (s.on_reject !== undefined) {
+      if (s.type !== 'review_gate') throw new ApmError('E_VALIDATION', `step ${s.id}: on_reject is only valid on a review_gate`);
+      if (!ids.has(s.on_reject)) throw new ApmError('E_VALIDATION', `step ${s.id}: on_reject points at unknown step ${s.on_reject}`);
+    }
     if (s.type !== 'terminal' && !(s.next?.length)) throw new ApmError('E_VALIDATION', `non-terminal step ${s.id} needs a next`);
   }
 }

@@ -7,6 +7,9 @@ import { cascadeActivateDependents } from './workflow.js';
 import { toRunView, toStepRunView, type RunView, type StepRunView } from '../domain/entities.js';
 import { REVIEW_VERDICTS, type ReviewVerdict } from '../domain/types.js';
 
+/** review_gate self-heal: max times the on_reject (source) step is re-opened before falling back to a human block. */
+const MAX_REVISE_ROUNDS = 3;
+
 export interface CompleteArgs {
   run: string;
   step: string;
@@ -168,6 +171,54 @@ export function retry(ctx: Ctx, a: RetryArgs): RunView {
   });
 }
 
+export interface ReviseArgs { run: string; step: string; agent: string; }
+
+/** Manually re-open a rejected review_gate's source step for revision (the manual counterpart
+ *  to on_reject self-heal). Resolves any open review_disagreement blocker, fails the pending
+ *  gate step, and re-opens the gate's on_reject step so `next` dispatches a revise. */
+export function revise(ctx: Ctx, a: ReviseArgs): RunView {
+  return ctx.storage.transaction('immediate', (tx) => {
+    const r = repos(tx);
+    r.agents.ensure(a.agent);
+
+    const runRow = r.runs.byId(a.run);
+    if (!runRow) throw new ApmError('E_NOT_FOUND', `run ${a.run} not found`);
+    const defRow = r.defs.byId(runRow.workflow_definition_id);
+    if (!defRow) throw new ApmError('E_INTERNAL', 'workflow definition not found');
+    const def: WorkflowDef = JSON.parse(defRow.definition_json);
+    const stepDef = stepById(def, a.step);
+    if (!stepDef || stepDef.type !== 'review_gate') {
+      throw new ApmError('E_VALIDATION', `step ${a.step} is not a review_gate`);
+    }
+    if (!stepDef.on_reject) {
+      throw new ApmError('E_PRECONDITION', `review_gate ${a.step} has no on_reject target to revise`);
+    }
+
+    // Resolve any open review_disagreement blocker(s) for this work item.
+    for (const b of r.blockers.listOpen({ workItemId: runRow.work_item_id, type: 'review_disagreement' })) {
+      r.blockers.resolve(b.id, { resolution: 'revising', answeredBy: a.agent });
+    }
+    // Fail the pending gate main step (so mainPending returns the re-opened source step).
+    const gateMain = r.stepRuns.mainPending(a.run);
+    if (gateMain && gateMain.step_id === a.step) r.stepRuns.fail(gateMain.id, 'reopened for revision');
+    // Re-open the on_reject (source) step.
+    const reviseCount = tx.get<{ c: number }>(
+      "SELECT COUNT(*) c FROM workflow_step_runs WHERE workflow_run_id=? AND step_id=? AND parent_step_run_id IS NULL",
+      a.run, stepDef.on_reject,
+    )?.c ?? 0;
+    r.stepRuns.insertPending(a.run, stepDef.on_reject, null, null, reviseCount + 1);
+    r.runs.setCurrentStep(a.run, stepDef.on_reject);
+    if (r.blockers.listOpen({ workItemId: runRow.work_item_id }).length === 0) {
+      r.workItems.setStatus(runRow.work_item_id, 'ready', a.agent);
+    }
+    tx.appendEvent({
+      actorId: a.agent, eventType: 'workflow_run.revise', entityType: 'workflow_run',
+      entityId: a.run, payload: { stepId: a.step, reopened: stepDef.on_reject, round: reviseCount + 1 },
+    });
+    return toRunView(r.runs.byId(a.run)!, defRow.name);
+  });
+}
+
 export interface ReviewArgs {
   run: string;
   step: string;
@@ -273,19 +324,44 @@ export function review(ctx: Ctx, a: ReviewArgs): RunView {
       // Complete the review_gate main step → advance to next step
       completeMainStep(tx, def, runRow, mainStep, { artifactId: null }, a.agent);
     } else {
-      // At least one role rejected or abstained → create review_disagreement blocker
+      // At least one role rejected or abstained.
       const nonPassingRoles = requiredRoles
         .filter((role) => {
           const child = latestByRole.get(role);
           return !child || child.verdict !== 'pass';
         })
         .join(', ');
-      r.blockers.insert({
-        workItemId: runRow.work_item_id,
-        type: 'review_disagreement',
-        reason: `Review not passed by roles: ${nonPassingRoles}`,
-      });
-      r.workItems.setStatus(runRow.work_item_id, 'blocked', a.agent);
+      const onReject = stepDef.on_reject;
+      // How many times has the on_reject (source) step already run? (revise rounds)
+      const reviseCount = onReject
+        ? (tx.get<{ c: number }>(
+            "SELECT COUNT(*) c FROM workflow_step_runs WHERE workflow_run_id=? AND step_id=? AND parent_step_run_id IS NULL",
+            a.run, onReject,
+          )?.c ?? 0)
+        : 0;
+      if (onReject && reviseCount < MAX_REVISE_ROUNDS) {
+        // Self-heal: fail the rejected gate step, re-open the source step for revision.
+        // next then dispatches the source step (a revise); completing it flows back to a fresh review_gate.
+        r.stepRuns.fail(mainStep.id, `review rejected by: ${nonPassingRoles}`);
+        r.stepRuns.insertPending(a.run, onReject, null, null, reviseCount + 1);
+        r.runs.setCurrentStep(a.run, onReject);
+        // Keep the work item dispatchable (unblock only if nothing else blocks it).
+        if (r.blockers.listOpen({ workItemId: runRow.work_item_id }).length === 0) {
+          r.workItems.setStatus(runRow.work_item_id, 'ready', a.agent);
+        }
+        tx.appendEvent({
+          actorId: a.agent, eventType: 'workflow_run.review_rejected_reopened', entityType: 'workflow_run',
+          entityId: a.run, payload: { stepId: a.step, reopened: onReject, round: reviseCount + 1, nonPassingRoles },
+        });
+      } else {
+        // No on_reject (or max revise rounds reached) → create review_disagreement blocker (human gate).
+        r.blockers.insert({
+          workItemId: runRow.work_item_id,
+          type: 'review_disagreement',
+          reason: `Review not passed by roles: ${nonPassingRoles}${onReject ? ` (max ${MAX_REVISE_ROUNDS} revise rounds reached)` : ''}`,
+        });
+        r.workItems.setStatus(runRow.work_item_id, 'blocked', a.agent);
+      }
     }
 
     return toRunView(r.runs.byId(a.run)!, defRow.name);
