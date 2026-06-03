@@ -38,6 +38,7 @@ export function repos(tx: Tx) {
         }
         return name;
       },
+      byId(id: string): any | undefined { return tx.get('SELECT * FROM agents WHERE id=?', id); },
     },
     workItems: {
       insert(w: NewWorkItem): string {

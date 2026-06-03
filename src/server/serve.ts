@@ -9,6 +9,7 @@ import { ok, fail, buildMeta } from '../format/envelope.js';
 import { matchRoute, type Route } from './router.js';
 import { serveFile } from './files.js';
 import { httpStatusFor } from './httpError.js';
+import * as enrich from './enrich.js';
 import * as work from '../usecases/work.js';
 import * as artifact from '../usecases/artifact.js';
 import * as workflow from '../usecases/workflow.js';
@@ -26,7 +27,8 @@ const str = (q: URLSearchParams, k: string): string | undefined => q.get(k) ?? u
 
 /** Read-only GET route table — thin adapters over existing usecases. */
 export const ROUTES: Route[] = [
-  { method: 'GET', pattern: '/api/status', run: ({ ctx }) => status.status(ctx) },
+  { method: 'GET', pattern: '/api/status', run: ({ ctx }) => enrich.enrichedStatus(ctx) },
+  { method: 'GET', pattern: '/api/leases', run: ({ ctx, query }) => enrich.listEnrichedLeases(ctx, { workItem: str(query, 'work-item'), agent: str(query, 'agent') }) },
   { method: 'GET', pattern: '/api/work', run: ({ ctx, query }) => work.list(ctx, { status: str(query, 'status'), type: str(query, 'type'), limit: num(query, 'limit'), offset: num(query, 'offset') }) },
   { method: 'GET', pattern: '/api/work/:id', run: ({ ctx, params }) => work.show(ctx, params.id) },
   { method: 'GET', pattern: '/api/work/:id/children', run: ({ ctx, params }) => work.children(ctx, params.id) },
@@ -40,8 +42,8 @@ export const ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/decisions', run: ({ ctx, query }) => decision.list(ctx, str(query, 'work-item')) },
   { method: 'GET', pattern: '/api/adr', run: ({ ctx }) => adr.list(ctx) },
   { method: 'GET', pattern: '/api/adr/:id', run: ({ ctx, params }) => adr.show(ctx, params.id) },
-  { method: 'GET', pattern: '/api/blockers', run: ({ ctx, query }) => blocker.list(ctx, str(query, 'work-item')) },
-  { method: 'GET', pattern: '/api/gates', run: ({ ctx, query }) => gate.list(ctx, { workItem: str(query, 'work-item') }) },
+  { method: 'GET', pattern: '/api/blockers', run: ({ ctx, query }) => enrich.listEnrichedBlockers(ctx, str(query, 'work-item')) },
+  { method: 'GET', pattern: '/api/gates', run: ({ ctx, query }) => enrich.listEnrichedGates(ctx, { workItem: str(query, 'work-item') }) },
   { method: 'GET', pattern: '/api/files', raw: (rc, res) => serveFile(rc.projectRoot, rc.query.get('path'), res, SECURITY_HEADERS) },
 ];
 
