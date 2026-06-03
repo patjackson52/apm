@@ -1,0 +1,16 @@
+.reading { max-width: 72ch; }
+.header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.meta { color: var(--fg-muted); font-size: 12px; }
+.status { font-size: 12px; padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.toc { font-size: 13px; }
+.toc ul { list-style: none; padding-left: 0; margin: 0; }
+.toc a { color: var(--fg-link, var(--fg)); text-decoration: none; }
+.timeline { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.timeRow { display: flex; gap: 8px; align-items: center; background: none; border: 1px solid transparent; cursor: pointer; text-align: left; padding: 2px 6px; border-radius: var(--radius-sm); }
+.timeRowCurrent { border-color: var(--border); font-weight: 600; }
+.tablist { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+.tab { padding: 6px 12px; border: none; background: none; cursor: pointer; color: var(--fg-muted); }
+.tabSelected { color: var(--fg); border-bottom: 2px solid var(--fg); }
+.card { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px; }
+.field { margin: 4px 0; }
+.label { color: var(--fg-muted); font-size: 12px; margin-right: 6px; }

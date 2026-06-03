@@ -6,6 +6,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { createElement, isValidElement, useState } from 'react';
 import type { ExtraProps } from 'react-markdown';
 import { schema } from './sanitizeSchema';
+import { rehypeHeadingIds } from '@/lib/markdown/rehypeHeadingIds';
 import { SafeImage } from './SafeImage';
 import { Mermaid } from './Mermaid';
 import { CopyButton } from '@/components/Copy/CopyButton';
@@ -97,9 +98,9 @@ export function Markdown({ body, docCopy = true }: { body: string; docCopy?: boo
   }
 
   function makeHeading(level: 1 | 2 | 3 | 4) {
-    return function Heading({ children, node }: ComponentProps<'h1'> & ExtraProps) {
+    return function Heading({ children, node, id }: ComponentProps<'h1'> & ExtraProps) {
       const line = node?.position?.start?.line;
-      const tag = createElement(`h${level}`, null, children);
+      const tag = createElement(`h${level}`, id ? { id } : null, children);
       return (
         <div className={s.headingRow}>
           {tag}
@@ -137,7 +138,7 @@ export function Markdown({ body, docCopy = true }: { body: string; docCopy?: boo
       ) : null}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeSanitize, schema]]}
+        rehypePlugins={[rehypeHeadingIds, [rehypeSanitize, schema]]}
         components={{
           a: SafeAnchor,
           img: SafeImage,

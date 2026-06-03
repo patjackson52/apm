@@ -28,6 +28,7 @@ export const useWorkflows = (o?: Opt) => useApiQuery(qk.workflows(), ep.workflow
 export const useWorkflow = (id: string, o?: Opt) => useApiQuery(qk.workflow(id), ep.workflow.path(id), ep.workflow.schema, false, o);
 export const useDecisions = (wi?: string, o?: Opt) => useApiQuery(qk.decisions(wi), ep.decisions.path(wi), ep.decisions.schema, false, o);
 export const useAdrs = (o?: Opt) => useApiQuery(qk.adr(), ep.adr.path(), ep.adr.schema, false, o);
+export const useAdr = (id: string, o?: Opt) => useApiQuery(qk.adrShow(id), ep.adrShow.path(id), ep.adrShow.schema, false, o);
 export const useBlockers = (wi?: string, o?: Opt) => useApiQuery(qk.blockers(wi), ep.blockers.path(wi), ep.blockers.schema, VOLATILE, o);
 export const useGates = (wi?: string, o?: Opt) => useApiQuery(qk.gates(wi), ep.gates.path(wi), ep.gates.schema, VOLATILE, o);
 export const useLeases = (f: { workItem?: string; agent?: string } = {}, o?: Opt) => useApiQuery(qk.leases(f), ep.leases.path(f), ep.leases.schema, VOLATILE, o);
