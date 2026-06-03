@@ -55,7 +55,11 @@ function renderAgent(envelope: Envelope<any>): string {
 
   // drained
   if (d.status === 'drained') {
-    return 'status=drained';
+    if (!d.reason && !d.counts) return 'status=drained';
+    const c = d.counts ?? {};
+    const countsStr = ['draft', 'ready', 'active', 'blocked', 'running_runs']
+      .map((k) => `${k}:${c[k] ?? 0}`).join(',');
+    return `status=drained reason=${d.reason ?? 'complete'} counts=${countsStr}`;
   }
 
   // dispatched next payload (has work_item + step)

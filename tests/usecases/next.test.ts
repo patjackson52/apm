@@ -44,6 +44,42 @@ describe('next usecase', () => {
     expect(r2.status).toBe('idle');
   });
 
+  it('drain reason=complete + zero counts when no work items exist at all', () => {
+    const r = next.next(ctx(), { agent: 'claude', capabilities: [], match: 'any' });
+    expect(r.status).toBe('drained');
+    expect((r as any).reason).toBe('complete');
+    expect((r as any).counts).toMatchObject({ draft: 0, ready: 0, running_runs: 0 });
+    expect((r as any).data.reason).toBe('complete');
+  });
+
+  it('drain reason=backlog + counts when draft work exists but nothing is activated', () => {
+    work.create(ctx(), { type: 'feature', title: 'A', agent: 'claude' });
+    work.create(ctx(), { type: 'feature', title: 'B', agent: 'claude' });
+    const r = next.next(ctx(), { agent: 'claude', capabilities: [], match: 'any' });
+    expect(r.status).toBe('drained');
+    expect((r as any).reason).toBe('backlog');
+    expect((r as any).counts.draft).toBe(2);
+    expect((r as any).counts.running_runs).toBe(0);
+  });
+
+  it('--acquire drain appends a next.drained event with reason+counts; peek does not', () => {
+    work.create(ctx(), { type: 'feature', title: 'A', agent: 'claude' });
+    // peek (no acquire) — must NOT write an event (deferred/read tx)
+    next.next(ctx(), { agent: 'claude', capabilities: [], match: 'any' });
+    const afterPeek = storage.transaction('deferred', (tx) =>
+      tx.all<any>("SELECT * FROM events WHERE event_type='next.drained'"));
+    expect(afterPeek.length).toBe(0);
+    // acquire drain — appends one event scoped to the agent
+    next.next(ctx(), { agent: 'claude', capabilities: [], match: 'any', acquire: true });
+    const evs = storage.transaction('deferred', (tx) =>
+      tx.all<any>("SELECT * FROM events WHERE event_type='next.drained'"));
+    expect(evs.length).toBe(1);
+    expect(evs[0].entity_id).toBe('claude');
+    const payload = JSON.parse(evs[0].payload_json);
+    expect(payload.reason).toBe('backlog');
+    expect(payload.counts.draft).toBe(1);
+  });
+
   it('idle awaiting_human when the only run is human-gate blocked', () => {
     // build a tiny workflow with a human_gate first step
     wf.register(ctx(), { id: 'hg', version: 1, name: 'hg', applies_to: ['task'], status: 'active',
