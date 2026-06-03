@@ -10,7 +10,7 @@
    Light + dark themes. Geist Sans (prose/UI) · Geist Mono (IDs/code/numbers).
    ============================================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap');
+/* Geist webfont @import removed — no CDN (PLAN supply-chain + CSP). Token stacks fall back to system fonts; self-host Geist via next/font as a follow-up. */
 
 /* ---------------------------------------------------------------------------
    1. TYPOGRAPHY PRIMITIVES
