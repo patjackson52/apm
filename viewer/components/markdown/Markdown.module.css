@@ -1,0 +1,10 @@
+.prose { max-width: var(--measure); line-height: var(--leading-prose); color: var(--fg); font-family: var(--font-sans); }
+.prose :global(h1), .prose :global(h2), .prose :global(h3) { line-height: var(--leading-tight); margin: 1.2em 0 0.5em; }
+.prose :global(p), .prose :global(ul), .prose :global(ol), .prose :global(blockquote) { margin: 0.6em 0; }
+.prose :global(code) { font-family: var(--font-mono); font-size: 0.88em; background: var(--bg-muted); padding: 0.12em 0.4em; border-radius: var(--radius-xs); }
+.prose :global(pre) { background: var(--bg-inset); padding: 12px; border-radius: var(--radius-md); overflow: auto; }
+.prose :global(pre) :global(code) { background: none; padding: 0; }
+.prose :global(blockquote) { border-left: 3px solid var(--border-strong); padding-left: 12px; color: var(--fg-muted); }
+.prose :global(a) { color: var(--accent); }
+.prose :global(table) { border-collapse: collapse; }
+.prose :global(th), .prose :global(td) { border: 1px solid var(--border); padding: 4px 8px; }
