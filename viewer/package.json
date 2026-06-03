@@ -1,0 +1,36 @@
+{
+  "name": "apm-viewer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "next": "15.5.19",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "5.7.3",
+    "@types/node": "22.10.7",
+    "@types/react": "19.0.7",
+    "@types/react-dom": "19.0.3",
+    "eslint": "9.18.0",
+    "eslint-config-next": "15.5.19",
+    "@eslint/eslintrc": "3.2.0",
+    "vitest": "2.1.9",
+    "@vitejs/plugin-react": "4.3.4",
+    "jsdom": "25.0.1",
+    "@testing-library/react": "16.1.0",
+    "@testing-library/jest-dom": "6.6.3",
+    "@playwright/test": "1.51.1"
+  }
+}

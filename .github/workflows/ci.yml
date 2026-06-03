@@ -1,0 +1,56 @@
+name: ci
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+# NOTE: deps are installed with `npm install` (not `npm ci`). The repo is developed
+# on macOS-arm64; some Linux-only OPTIONAL native sub-deps (e.g. wasm fallbacks pulling
+# @emnapi) are not recorded by a macOS-generated lockfile, so `npm ci`'s strict
+# in-sync check fails on the Linux runner. `npm install` honors the committed lockfile
+# as the resolution baseline and adds the platform-optional deps at install time.
+# Follow-up: generate a Linux-complete lockfile (Linux runner / container) to restore `npm ci`.
+
+jobs:
+  core-and-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+      # apm-core
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+      # viewer (frontend)
+      - run: npm install --no-audit --no-fund
+        working-directory: viewer
+      - run: npm run lint
+        working-directory: viewer
+      - run: npm run typecheck
+        working-directory: viewer
+      - run: npm run test
+        working-directory: viewer
+
+  e2e:
+    if: github.ref == 'refs/heads/main'
+    needs: core-and-unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm install --no-audit --no-fund
+        working-directory: viewer
+      - run: npx playwright install --with-deps chromium
+        working-directory: viewer
+      - run: npm run e2e
+        working-directory: viewer
+        env:
+          CI: "true"
