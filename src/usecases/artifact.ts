@@ -4,6 +4,12 @@ import { repos } from '../storage/repos.js';
 import { ARTIFACT_TYPES, ARTIFACT_STATUSES, type ArtifactType } from '../domain/types.js';
 import { toArtifactView, type ArtifactView, type Page } from '../domain/entities.js';
 
+/** The work item an artifact lineage is linked to (V1: at most one), or null. */
+function workItemForRoot(tx: any, rootId: string): string | null {
+  const row = tx.get('SELECT work_item_id FROM work_item_artifacts WHERE root_artifact_id=? LIMIT 1', rootId) as { work_item_id: string } | undefined;
+  return row?.work_item_id ?? null;
+}
+
 export interface CreateArgs {
   workItem: string; type: ArtifactType; title: string; body: string; agent: string;
 }
@@ -17,7 +23,7 @@ export function create(ctx: Ctx, a: CreateArgs): ArtifactView {
     const id = r.artifacts.insert({ type: a.type, title: a.title, body: a.body, createdBy: a.agent, version: 1 });
     r.artifacts.linkToWorkItem(a.workItem, id, 'produced');
     const row = r.artifacts.byId(id)!;
-    return toArtifactView(row);
+    return toArtifactView(row, a.workItem);
   });
 }
 
@@ -35,7 +41,7 @@ export function revise(ctx: Ctx, id: string, body: string, agent: string): Artif
     });
     r.artifacts.setSuperseded(id);
     const row = r.artifacts.byId(newId)!;
-    return toArtifactView(row);
+    return toArtifactView(row, workItemForRoot(tx, row.root_artifact_id));
   });
 }
 
@@ -44,7 +50,7 @@ export function show(ctx: Ctx, id: string): ArtifactView {
     const r = repos(tx);
     const row = r.artifacts.byId(id);
     if (!row) throw new ApmError('E_NOT_FOUND', `artifact ${id} not found`);
-    return toArtifactView(row);
+    return toArtifactView(row, workItemForRoot(tx, row.root_artifact_id));
   });
 }
 
@@ -58,7 +64,7 @@ export function list(ctx: Ctx, a: ListArgs): Page<ArtifactView> {
     const rows = roots.map((root) => r.artifacts.currentByRoot(root)).filter(Boolean);
     const paged = rows.slice(offset, offset + limit);
     return {
-      items: paged.map(toArtifactView),
+      items: paged.map((row: any) => toArtifactView({ ...row, body: undefined }, a.workItem)),
       page: { total: rows.length, limit, offset, has_more: offset + paged.length < rows.length },
     };
   });
@@ -71,7 +77,7 @@ function transition(ctx: Ctx, id: string, from: string[], to: string): ArtifactV
     if (!row) throw new ApmError('E_NOT_FOUND', `artifact ${id} not found`);
     if (!from.includes(row.status)) throw new ApmError('E_PRECONDITION', `cannot transition ${row.status} → ${to}`);
     r.artifacts.setStatus(id, to);
-    return toArtifactView({ ...row, status: to });
+    return toArtifactView({ ...row, status: to }, workItemForRoot(tx, row.root_artifact_id));
   });
 }
 

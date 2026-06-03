@@ -81,12 +81,19 @@ export function toRunView(row: any, workflowName: string): RunView {
 export interface ArtifactView {
   id: string; type: ArtifactType; title: string; version: number; status: ArtifactStatus;
   root: string; supersedes: string | null; created_by: string | null; created_at: string;
+  // body is RAW agent-authored markdown returned verbatim — APM never sanitizes server-side
+  // (would corrupt copy/round-trip). Render-time sanitization is the Viewer's job (WI-28).
+  // null on lean reads (e.g. list, which omits the body column).
+  body: string | null;
+  work_item: string | null;
 }
-export function toArtifactView(row: any): ArtifactView {
+/** Dumb mapper: body comes straight off the row (null if absent); work_item is supplied by the caller. */
+export function toArtifactView(row: any, workItem: string | null = null): ArtifactView {
   return {
     id: row.id, type: row.type, title: row.title, version: row.version, status: row.status,
     root: row.root_artifact_id, supersedes: row.supersedes_artifact_id ?? null,
     created_by: row.created_by ?? null, created_at: row.created_at,
+    body: row.body ?? null, work_item: workItem,
   };
 }
 

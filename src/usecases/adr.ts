@@ -47,7 +47,7 @@ export function list(ctx: Ctx): Page<ArtifactView> {
   return ctx.storage.transaction('deferred', (tx) => {
     const rows = tx.all<any>("SELECT * FROM artifacts WHERE type='adr' ORDER BY id");
     return {
-      items: rows.map(toArtifactView),
+      items: rows.map((row: any) => toArtifactView(row)),
       page: { total: rows.length, limit: rows.length, offset: 0, has_more: false },
     };
   });
