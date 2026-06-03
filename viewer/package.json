@@ -16,6 +16,8 @@
   "dependencies": {
     "@apm/types": "file:../packages/types",
     "@tanstack/react-query": "5.101.0",
+    "dompurify": "^3.2.4",
+    "mermaid": "^11.4.1",
     "next": "15.5.19",
     "react": "19.0.0",
     "react-dom": "19.0.0",
@@ -28,6 +30,7 @@
     "@playwright/test": "1.51.1",
     "@testing-library/jest-dom": "6.6.3",
     "@testing-library/react": "16.1.0",
+    "@types/dompurify": "^3.0.5",
     "@types/node": "22.10.7",
     "@types/react": "19.0.7",
     "@types/react-dom": "19.0.3",
