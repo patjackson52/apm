@@ -150,3 +150,15 @@ export const WorkflowDefViewSchema = z.object({
   steps: z.array(z.object({ id: z.string(), type: z.string() }).passthrough()),
   edges: z.array(z.object({ from: z.string(), to: z.string() }).strict()),
 }).strict();
+
+// /api/status — StatusResult (serve enrichedStatus enriches active_leases + open_blockers)
+export const AwaitsHumanSchema = z.object({ id: z.string(), reason: z.string() }).strict();
+
+export const StatusViewSchema = z.object({
+  work: z.object({ by_status: z.record(z.string(), z.number()) }).strict(),
+  ready_count: z.number(),
+  active_leases: z.array(LeaseViewSchema),            // LeaseViewSchema is enriched
+  open_blockers: z.array(EnrichedBlockerViewSchema),  // enriched
+  awaiting_human: z.array(AwaitsHumanSchema),
+  active_runs: z.array(RunViewSchema),
+}).strict();

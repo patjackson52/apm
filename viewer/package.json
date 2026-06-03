@@ -14,24 +14,25 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@apm/types": "file:../packages/types",
+    "@tanstack/react-query": "5.101.0",
     "next": "15.5.19",
     "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "@apm/types": "file:../packages/types"
+    "react-dom": "19.0.0"
   },
   "devDependencies": {
-    "typescript": "5.7.3",
+    "@eslint/eslintrc": "3.2.0",
+    "@playwright/test": "1.51.1",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.1.0",
     "@types/node": "22.10.7",
     "@types/react": "19.0.7",
     "@types/react-dom": "19.0.3",
+    "@vitejs/plugin-react": "4.3.4",
     "eslint": "9.18.0",
     "eslint-config-next": "15.5.19",
-    "@eslint/eslintrc": "3.2.0",
-    "vitest": "2.1.9",
-    "@vitejs/plugin-react": "4.3.4",
     "jsdom": "25.0.1",
-    "@testing-library/react": "16.1.0",
-    "@testing-library/jest-dom": "6.6.3",
-    "@playwright/test": "1.51.1"
+    "typescript": "5.7.3",
+    "vitest": "2.1.9"
   }
 }
