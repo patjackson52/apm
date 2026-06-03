@@ -7,7 +7,7 @@ export const schema: Options = {
   tagNames: [
     'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li',
     'strong', 'em', 'del', 'code', 'pre', 'a', 'br', 'span',
-    'blockquote', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    'blockquote', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img',
   ],
   attributes: {
     a: ['href', 'title'],
@@ -15,8 +15,9 @@ export const schema: Options = {
     span: ['className'],
     th: ['align'],
     td: ['align'],
+    img: ['src', 'alt', 'title'],
   },
-  protocols: { href: ['https'] }, // https + relative/# only; strips javascript:/data:/http:/mailto:
+  protocols: { href: ['https'], src: ['https'] }, // relative + https only; SafeImage enforces local-only + /api/files jails
   clobberPrefix: 'apm-',
   allowComments: false,
 };

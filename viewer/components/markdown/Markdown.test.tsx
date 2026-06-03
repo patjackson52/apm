@@ -59,9 +59,10 @@ describe('Markdown — normal render', () => {
     expect(a?.getAttribute('rel')).toBe('noopener noreferrer');
     expect(a?.getAttribute('target')).toBe('_blank');
   });
-  it('mermaid fence renders as plain <pre><code class*="language-mermaid"> (deferred to WI-29)', () => {
-    const code = html('```mermaid\ngraph TD; A-->B;\n```').querySelector('pre code');
-    expect(code?.className).toMatch(/language-mermaid/);
+  it('mermaid fence is intercepted as a diagram, not raw language-mermaid code (WI-29)', () => {
+    const c = html('```mermaid\ngraph TD; A-->B;\n```');
+    expect(c.querySelector('code.language-mermaid')).toBeNull();
+    expect(c.querySelector('pre code')).toBeNull();
   });
   it('re-sanitizes every body (version independence)', () => {
     expect(html('# Alpha').querySelector('h1')?.textContent).toBe('Alpha');
