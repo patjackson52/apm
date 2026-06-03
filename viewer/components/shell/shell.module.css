@@ -1,0 +1,16 @@
+.shell { min-height: 100vh; background: var(--bg-app); color: var(--fg); }
+.topbar { display: flex; align-items: center; gap: 16px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--border); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
+.logo { font-weight: 700; }
+.spacer { flex: 1; }
+.iconBtn { background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--fg); cursor: pointer; width: 32px; height: 32px; }
+.switcher { display: inline-flex; align-items: center; gap: 8px; }
+.projectName { font-weight: 600; color: var(--fg-muted); }
+.switchBtn { font-size: 11px; padding: 2px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--bg-muted); color: var(--fg-faint); cursor: default; }
+.body { display: flex; }
+.sidebar { width: 220px; border-right: 1px solid var(--border); background: var(--bg-subtle); padding: 12px 8px; transition: width 0.15s; }
+.collapsed { width: 52px; }
+.collapseBtn { background: transparent; border: none; color: var(--fg-muted); cursor: pointer; margin-bottom: 8px; }
+.navList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.navLink { display: block; padding: 6px 10px; border-radius: var(--radius-sm); color: var(--fg-muted); text-decoration: none; }
+.navLink[aria-current="page"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.main { flex: 1; padding: 24px; }
