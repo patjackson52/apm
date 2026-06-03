@@ -17,7 +17,7 @@ import {
   envelopeSchema, pageSchema,
   WorkItemViewSchema, RunViewSchema, StepRunViewSchema, ArtifactViewSchema,
   DecisionViewSchema, BlockerViewSchema, EnrichedBlockerViewSchema, WorkBlockersSchema,
-  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema,
+  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, StatusViewSchema,
 } from '@apm/types';
 
 const clock = fixedClock('2026-06-03T12:00:00.000Z');
@@ -54,7 +54,7 @@ async function check(path: string, dataSchema: z.ZodTypeAny) {
 }
 
 describe('apm serve ↔ @apm/types contract', () => {
-  it('/api/status', () => check('/api/status', z.object({}).passthrough()));
+  it('/api/status', () => check('/api/status', StatusViewSchema));
   it('/api/work (page)', () => check('/api/work', pageSchema(WorkItemViewSchema)));
   it('/api/work/:id', () => check(`/api/work/${wiId}`, WorkItemViewSchema));
   it('/api/work/:id/children (page)', () => check(`/api/work/${wiId}/children`, pageSchema(WorkItemViewSchema)));
