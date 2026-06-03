@@ -1,0 +1,11 @@
+.chip { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border-radius: var(--radius-sm); background: var(--bg-muted); color: var(--fg-muted); border: 1px solid var(--border); }
+.t_work { color: var(--accent); }
+.t_artifact { color: var(--fg); }
+.t_run { color: var(--status-active-fg); }
+.t_lease { color: var(--fg-muted); }
+.t_decision { color: var(--accent); }
+.t_adr { color: var(--accent); }
+.t_blocker { color: var(--status-blocked-fg); }
+.t_gate { color: var(--gate-fg); }
+.t_session { color: var(--fg-muted); }
+.t_neutral { color: var(--fg-muted); }

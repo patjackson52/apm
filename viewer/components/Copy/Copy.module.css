@@ -1,0 +1,4 @@
+.wrap { display: inline-flex; align-items: center; }
+.btn { font-size: 12px; padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-surface); color: var(--fg); cursor: pointer; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

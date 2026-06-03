@@ -1,0 +1,1 @@
+export { IdChip } from './IdChip';
