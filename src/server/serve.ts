@@ -1,4 +1,5 @@
 import http from 'node:http';
+import path from 'node:path';
 import type { Clock } from '../domain/clock.js';
 import { systemClock } from '../domain/clock.js';
 import { SqliteStorage } from '../storage/sqlite.js';
@@ -6,6 +7,7 @@ import { findProjectDb, type Ctx } from '../cli/run.js';
 import { ApmError } from '../domain/errors.js';
 import { ok, fail, buildMeta } from '../format/envelope.js';
 import { matchRoute, type Route } from './router.js';
+import { serveFile } from './files.js';
 import { httpStatusFor } from './httpError.js';
 import * as work from '../usecases/work.js';
 import * as artifact from '../usecases/artifact.js';
@@ -40,6 +42,7 @@ export const ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/adr/:id', run: ({ ctx, params }) => adr.show(ctx, params.id) },
   { method: 'GET', pattern: '/api/blockers', run: ({ ctx, query }) => blocker.list(ctx, str(query, 'work-item')) },
   { method: 'GET', pattern: '/api/gates', run: ({ ctx, query }) => gate.list(ctx, { workItem: str(query, 'work-item') }) },
+  { method: 'GET', pattern: '/api/files', raw: (rc, res) => serveFile(rc.projectRoot, rc.query.get('path'), res) },
 ];
 
 function writeJson(res: http.ServerResponse, statusCode: number, body: unknown): void {
@@ -67,11 +70,21 @@ export function createListener(dir: string, clock: Clock): http.RequestListener 
       writeJson(res, 405, fail(new ApmError('E_VALIDATION', 'method not allowed'), buildMeta(cmd, clock))); return;
     }
 
+    if (m.route.raw) {
+      try {
+        const projectRoot = path.dirname(path.dirname(findProjectDb(dir)));
+        m.route.raw({ projectRoot, query: url.searchParams }, res);
+      } catch (e) {
+        const apm = e instanceof ApmError ? e : new ApmError('E_INTERNAL', String((e as Error)?.message ?? e));
+        writeJson(res, httpStatusFor(apm), fail(apm, buildMeta(cmd, clock)));
+      }
+      return;
+    }
     let storage: SqliteStorage | undefined;
     try {
       storage = new SqliteStorage(findProjectDb(dir), clock);
       const ctx: Ctx = { storage, clock };
-      const data = m.route.run({ ctx, params: m.params, query: url.searchParams });
+      const data = m.route.run!({ ctx, params: m.params, query: url.searchParams });
       writeJson(res, 200, ok(data, buildMeta(cmd, clock)));
     } catch (e) {
       const apm = e instanceof ApmError ? e : new ApmError('E_INTERNAL', String((e as Error)?.message ?? e));
