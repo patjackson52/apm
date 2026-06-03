@@ -1,22 +1,14 @@
-'use client';
-import { useState } from 'react';
-import s from './Copy.module.css';
+"use client";
+import { CopyButton } from '@/components/copy/CopyButton';
 
+/** Copy a string to the clipboard. Thin wrapper over CopyButton (WI-30). */
 export function Copy({ text, label = 'Copy' }: { text: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
   const supported = typeof navigator !== 'undefined' && !!navigator.clipboard;
-  const onClick = async () => {
-    if (!supported) return;
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
   return (
-    <span className={s.wrap}>
-      <button type="button" className={s.btn} onClick={onClick} disabled={!supported} aria-label={label}>
-        {copied ? 'Copied' : label}
-      </button>
-      <span className={s.sr} aria-live="polite">{copied ? 'Copied to clipboard' : ''}</span>
-    </span>
+    <CopyButton
+      onCopy={() => navigator.clipboard.writeText(text)}
+      label={label}
+      disabled={!supported}
+    />
   );
 }
