@@ -50,3 +50,9 @@ export function end(ctx: Ctx, id: string): SessionView {
     return toSessionView(tx.get('SELECT * FROM sessions WHERE id=?', id));
   });
 }
+
+/** List all sessions (newest agent panel). */
+export function list(ctx: Ctx): SessionView[] {
+  return ctx.storage.transaction('deferred', (tx) =>
+    (tx.all('SELECT * FROM sessions ORDER BY id') as any[]).map(toSessionView));
+}
