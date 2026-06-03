@@ -75,6 +75,12 @@ export function repos(tx: Tx) {
           "SELECT target_work_item_id FROM work_item_links WHERE source_work_item_id=? AND link_type='depends_on' ORDER BY target_work_item_id", source,
         ).map((r) => r.target_work_item_id);
       },
+      /** Reverse of dependsOn: work items that depend ON `target`. */
+      dependents(target: string): string[] {
+        return tx.all<{ source_work_item_id: string }>(
+          "SELECT source_work_item_id FROM work_item_links WHERE target_work_item_id=? AND link_type='depends_on' ORDER BY source_work_item_id", target,
+        ).map((r) => r.source_work_item_id);
+      },
     },
     defs: {
       byNameVersion(name: string, version: number): any | undefined {
