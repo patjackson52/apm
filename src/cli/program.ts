@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import type { Clock } from '../domain/clock.js';
 import { systemClock } from '../domain/clock.js';
 import { initProject } from '../usecases/init.js';
+import { startServer } from '../server/serve.js';
 import { runCommand, resolveFormat } from './run.js';
 import type { RunDeps } from './run.js';
 import type { OutputFormat } from '../format/render.js';
@@ -58,6 +59,22 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
       const dir = opts.dir ?? g.dir ?? process.cwd();
       const res = initProject(dir, clock);
       out(res.created ? `APM initialized at ${res.dbPath}` : `APM already initialized at ${res.dbPath}`);
+    });
+
+  program
+    .command('serve')
+    .description('Run the read-only HTTP API server (bound to 127.0.0.1)')
+    .option('-p, --port <n>', 'port', (v) => parseInt(v, 10), 7842)
+    .option('--dir <path>', 'project directory')
+    .action(function (this: Command, opts: { port: number; dir?: string }) {
+      const g = this.optsWithGlobals() as { dir?: string };
+      const dir = opts.dir ?? g.dir ?? process.cwd();
+      const server = startServer({ dir, clock, port: opts.port });
+      server.on('listening', () => {
+        const a = server.address();
+        const port = typeof a === 'object' && a ? a.port : opts.port;
+        out(`apm serve listening on http://127.0.0.1:${port} (project: ${dir})`);
+      });
     });
 
   // --- work command group ---
