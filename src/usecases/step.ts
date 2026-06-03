@@ -3,7 +3,7 @@ import { ApmError } from '../domain/errors.js';
 import { repos } from '../storage/repos.js';
 import { validateWorkflow, type WorkflowDef, stepById } from '../domain/workflow.js';
 import { completeMainStep } from '../domain/advance.js';
-import { toRunView, type RunView } from '../domain/entities.js';
+import { toRunView, toStepRunView, type RunView, type StepRunView } from '../domain/entities.js';
 import { REVIEW_VERDICTS, type ReviewVerdict } from '../domain/types.js';
 
 export interface CompleteArgs {
@@ -283,5 +283,14 @@ export function review(ctx: Ctx, a: ReviewArgs): RunView {
     }
 
     return toRunView(r.runs.byId(a.run)!, defRow.name);
+  });
+}
+
+/** Read all step_runs for a run (main-path + reviewer children) for the run-state overlay. */
+export function listForRun(ctx: Ctx, runId: string): StepRunView[] {
+  return ctx.storage.transaction('deferred', (tx) => {
+    const r = repos(tx);
+    if (!r.runs.byId(runId)) throw new ApmError('E_NOT_FOUND', `run ${runId} not found`);
+    return r.stepRuns.listForRun(runId).map(toStepRunView);
   });
 }
