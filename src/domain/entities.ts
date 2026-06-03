@@ -164,3 +164,25 @@ export function toStepRunView(row: any): StepRunView {
     failure_reason: row.failure_reason ?? null,
   };
 }
+
+/** An audit event row projected for the activity feed. */
+export interface EventView {
+  id: string;
+  actor: string | null;
+  event_type: string;
+  entity_type: string;
+  entity_id: string;
+  payload: unknown;
+  created_at: string;
+}
+export function toEventView(row: any): EventView {
+  return {
+    id: row.id,
+    actor: row.actor_id ?? null,
+    event_type: row.event_type,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    payload: row.payload_json ? JSON.parse(row.payload_json) : null,
+    created_at: row.created_at,
+  };
+}
