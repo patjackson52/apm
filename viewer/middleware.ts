@@ -8,7 +8,7 @@ export function middleware(req: NextRequest) {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' ${SERVE} data:`,
+    `img-src 'self' ${SERVE}`,
     `connect-src 'self' ${SERVE}`,
     "font-src 'self'",
     "object-src 'none'",
@@ -30,5 +30,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [{ source: '/((?!_next/static|_next/image|favicon.ico).*)' }],
+  matcher: [{ source: '/((?!api/|_next/static|_next/image|favicon.ico).*)' }],
 };
