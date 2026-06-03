@@ -1,0 +1,311 @@
+/* APM Viewer design tokens — ported from docs/APM Viewer Design System/colors_and_type.css (WI-27).
+ * WCAG AA contrast fixes (light theme, vs their bg): --status-cancelled-fg #8a909c->#5b616d,
+ * --status-blocked-fg #d12a3a->#c2202f, --gate-fg #b45309->#92400e (all now >=4.5:1).
+ * Note: the 'dark current-tag' fix (PLAN.md) targets a token in the kit's component CSS
+ * (run/workflow overlay), not this token file -> ported with WI-33. Skeleton shimmer
+ * reduced-motion gating lives with the Skeleton component (WI-27). */
+/* ============================================================================
+   APM VIEWER — Design Tokens
+   Developer-tool aesthetic: precise, calm, information-dense.
+   Light + dark themes. Geist Sans (prose/UI) · Geist Mono (IDs/code/numbers).
+   ============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap');
+
+/* ---------------------------------------------------------------------------
+   1. TYPOGRAPHY PRIMITIVES
+   --------------------------------------------------------------------------- */
+:root {
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Type scale — compact, dev-tool density. rem assumes 16px root. */
+  --text-2xs:  11px;   /* badge text, dense table meta */
+  --text-xs:   12px;   /* secondary labels, captions */
+  --text-sm:   13px;   /* default UI / table body */
+  --text-base: 14px;   /* body prose baseline in app */
+  --text-md:   15px;   /* comfortable reading prose */
+  --text-lg:   17px;   /* card titles */
+  --text-xl:   20px;   /* section headings */
+  --text-2xl:  24px;   /* page titles */
+  --text-3xl:  30px;   /* hero numbers / display */
+  --text-4xl:  40px;
+
+  --leading-tight: 1.25;
+  --leading-snug:  1.4;
+  --leading-normal:1.55;
+  --leading-prose: 1.7;   /* long-form spec/plan reading */
+
+  --tracking-tight: -0.014em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;   /* uppercase eyebrow labels */
+
+  --weight-light: 300;
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ---------- SPACING (4px base) ---------- */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---------- RADII ---------- */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-pill: 999px;
+
+  /* ---------- READING MEASURE ---------- */
+  --measure: 72ch;        /* max line length for long-form docs */
+
+  /* ---------- Z LAYERS ---------- */
+  --z-base: 0;
+  --z-sticky: 50;
+  --z-popover: 100;
+  --z-toolbar: 200;
+  --z-modal: 500;
+  --z-toast: 800;
+}
+
+/* ---------------------------------------------------------------------------
+   2. COLOR — LIGHT THEME (default)
+   Cool-neutral gray base, indigo-blue interactive accent.
+   --------------------------------------------------------------------------- */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces */
+  --bg-app:      #f6f7f9;   /* canvas behind panels */
+  --bg-surface:  #ffffff;   /* cards, panels, sidebar */
+  --bg-subtle:   #f1f2f5;   /* hover fills, zebra, inset */
+  --bg-muted:    #e9ebef;   /* pressed, track */
+  --bg-inset:    #f7f8fa;   /* code blocks, wells */
+  --bg-overlay:  rgba(17, 20, 26, 0.42);  /* modal scrim */
+
+  /* Borders */
+  --border:        #e4e6eb;
+  --border-strong: #d2d6de;
+  --border-focus:  var(--accent);
+
+  /* Text */
+  --fg:        #181b22;   /* primary */
+  --fg-muted:  #5a616e;   /* secondary */
+  --fg-subtle: #878d9a;   /* tertiary / placeholder */
+  --fg-faint:  #aab0bb;   /* disabled, watermark */
+  --fg-on-accent: #ffffff;
+
+  /* Interactive accent (indigo-blue) */
+  --accent:        #3b66f5;
+  --accent-hover:  #2f56df;
+  --accent-active: #2848c4;
+  --accent-bg:     #eef2fe;
+  --accent-border: #c6d3fb;
+
+  /* Focus ring */
+  --ring: 0 0 0 3px rgba(59, 102, 245, 0.30);
+
+  /* ---------- STATUS SYSTEM (the core) ---------- */
+  /* each: -fg (text/icon/solid), -bg (soft tint), -border */
+  --status-draft-fg:     #5d6470;
+  --status-draft-bg:     #eef0f3;
+  --status-draft-border: #d8dce3;
+
+  --status-ready-fg:     #0e7490;   /* cyan-teal */
+  --status-ready-bg:     #e2f6fb;
+  --status-ready-border: #b4e7f2;
+
+  --status-active-fg:    #6d3df0;   /* violet — live */
+  --status-active-bg:    #f0ebfe;
+  --status-active-border:#d8c9fc;
+  --status-active-glow:  rgba(124, 92, 252, 0.45);
+
+  --status-blocked-fg:    #c2202f;  /* red — draws eye */
+  --status-blocked-bg:    #fdebec;
+  --status-blocked-border:#f6c4c8;
+
+  --status-completed-fg:    #18794e; /* calm green */
+  --status-completed-bg:    #e6f5ec;
+  --status-completed-border:#bce3cb;
+
+  --status-cancelled-fg:    #5b616d; /* faded / muted */
+  --status-cancelled-bg:    #f2f3f5;
+  --status-cancelled-border:#e0e3e8;
+
+  /* Gate / awaiting-human (amber) — distinct from blocked */
+  --gate-fg:     #92400e;
+  --gate-bg:     #fdf0db;
+  --gate-border: #f5dca5;
+
+  /* Run / step status (workflow nodes) */
+  --run-completed: var(--status-completed-fg);
+  --run-active:    var(--status-active-fg);
+  --run-pending:   #9aa1ad;
+  --run-failed:    var(--status-blocked-fg);
+  --run-skipped:   #b6bcc6;
+
+  /* Reviewer verdicts */
+  --verdict-pass:    #18794e;
+  --verdict-reject:  #d12a3a;
+  --verdict-abstain: #8a909c;
+
+  /* Syntax highlighting (code blocks) */
+  --code-fg:       #2b2f38;
+  --code-comment:  #8a909c;
+  --code-keyword:  #9333ea;
+  --code-string:   #15803d;
+  --code-number:   #b45309;
+  --code-function: #2563eb;
+  --code-property: #0e7490;
+  --code-punct:    #6b7280;
+
+  /* Elevation */
+  --shadow-xs:  0 1px 2px rgba(17,20,26,0.05);
+  --shadow-sm:  0 1px 2px rgba(17,20,26,0.06), 0 1px 3px rgba(17,20,26,0.05);
+  --shadow-md:  0 2px 4px rgba(17,20,26,0.06), 0 4px 12px rgba(17,20,26,0.07);
+  --shadow-lg:  0 8px 16px rgba(17,20,26,0.08), 0 16px 40px rgba(17,20,26,0.12);
+  --shadow-pop: 0 4px 12px rgba(17,20,26,0.10), 0 12px 28px rgba(17,20,26,0.14);
+
+  --grid-line: rgba(17,20,26,0.05);  /* node-graph canvas dots */
+}
+
+/* ---------------------------------------------------------------------------
+   3. COLOR — DARK THEME
+   --------------------------------------------------------------------------- */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-app:      #0c0e12;
+  --bg-surface:  #14171d;
+  --bg-subtle:   #1b1f27;
+  --bg-muted:    #232833;
+  --bg-inset:    #0f1217;
+  --bg-overlay:  rgba(0, 0, 0, 0.60);
+
+  --border:        #262b34;
+  --border-strong: #353c47;
+  --border-focus:  var(--accent);
+
+  --fg:        #e8eaee;
+  --fg-muted:  #9aa2b0;
+  --fg-subtle: #6c747f;
+  --fg-faint:  #4a515c;
+  --fg-on-accent: #ffffff;
+
+  --accent:        #5a7dff;
+  --accent-hover:  #6f8eff;
+  --accent-active: #4d6ff0;
+  --accent-bg:     #182138;
+  --accent-border: #2e3f6b;
+
+  --ring: 0 0 0 3px rgba(90, 125, 255, 0.35);
+
+  --status-draft-fg:     #a3abb8;
+  --status-draft-bg:     #20242d;
+  --status-draft-border: #323844;
+
+  --status-ready-fg:     #34c3e0;
+  --status-ready-bg:     #0e2730;
+  --status-ready-border: #1c4654;
+
+  --status-active-fg:    #a78bfa;
+  --status-active-bg:    #1f1a36;
+  --status-active-border:#3a2f63;
+  --status-active-glow:  rgba(167, 139, 250, 0.55);
+
+  --status-blocked-fg:    #ff6b78;
+  --status-blocked-bg:    #2c1418;
+  --status-blocked-border:#5a2329;
+
+  --status-completed-fg:    #3ecf8e;
+  --status-completed-bg:    #0f2920;
+  --status-completed-border:#1d4d39;
+
+  --status-cancelled-fg:    #767e8c;
+  --status-cancelled-bg:    #1a1e26;
+  --status-cancelled-border:#2b313b;
+
+  --gate-fg:     #f0b94f;
+  --gate-bg:     #2c2310;
+  --gate-border: #574420;
+
+  --run-completed: var(--status-completed-fg);
+  --run-active:    var(--status-active-fg);
+  --run-pending:   #5c6470;
+  --run-failed:    var(--status-blocked-fg);
+  --run-skipped:   #454b56;
+
+  --verdict-pass:    #3ecf8e;
+  --verdict-reject:  #ff6b78;
+  --verdict-abstain: #767e8c;
+
+  --code-fg:       #d7dbe2;
+  --code-comment:  #6c747f;
+  --code-keyword:  #c792ea;
+  --code-string:   #7ee0a0;
+  --code-number:   #f0b94f;
+  --code-function: #82a8ff;
+  --code-property: #34c3e0;
+  --code-punct:    #8a919e;
+
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.40);
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.40);
+  --shadow-md:  0 2px 6px rgba(0,0,0,0.45), 0 6px 16px rgba(0,0,0,0.50);
+  --shadow-lg:  0 10px 24px rgba(0,0,0,0.55), 0 20px 48px rgba(0,0,0,0.60);
+  --shadow-pop: 0 6px 18px rgba(0,0,0,0.55), 0 16px 36px rgba(0,0,0,0.65);
+
+  --grid-line: rgba(255,255,255,0.045);
+}
+
+/* ---------------------------------------------------------------------------
+   4. SEMANTIC ELEMENT DEFAULTS
+   --------------------------------------------------------------------------- */
+.apm-root {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Long-form prose (rendered markdown specs/plans) */
+.prose {
+  font-size: var(--text-md);
+  line-height: var(--leading-prose);
+  color: var(--fg);
+  max-width: var(--measure);
+}
+.prose h1 { font-size: var(--text-3xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); line-height: var(--leading-tight); margin: 0 0 var(--space-4); }
+.prose h2 { font-size: var(--text-2xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); line-height: var(--leading-tight); margin: var(--space-10) 0 var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
+.prose h3 { font-size: var(--text-xl); font-weight: var(--weight-semibold); line-height: var(--leading-snug); margin: var(--space-8) 0 var(--space-2); }
+.prose h4 { font-size: var(--text-md); font-weight: var(--weight-semibold); margin: var(--space-5) 0 var(--space-1); }
+.prose p { margin: 0 0 var(--space-4); }
+.prose ul, .prose ol { margin: 0 0 var(--space-4); padding-left: var(--space-6); }
+.prose li { margin: var(--space-1) 0; }
+.prose a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-border); }
+.prose a:hover { border-bottom-color: var(--accent); }
+.prose blockquote { margin: var(--space-4) 0; padding: var(--space-2) var(--space-4); border-left: 3px solid var(--accent-border); color: var(--fg-muted); background: var(--bg-subtle); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.prose code { font-family: var(--font-mono); font-size: 0.88em; background: var(--bg-muted); padding: 0.12em 0.4em; border-radius: var(--radius-xs); }
+.prose pre code { background: none; padding: 0; }
+
+/* IDs, refs, numeric metadata */
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-size: var(--text-2xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--fg-subtle); }
+
+::selection { background: rgba(59,102,245,0.22); }
+[data-theme="dark"] ::selection { background: rgba(90,125,255,0.32); }

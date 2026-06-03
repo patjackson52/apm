@@ -1,0 +1,4 @@
+.wrap { display: flex; flex-direction: column; gap: 8px; }
+.shimmer { display: block; background: linear-gradient(90deg, var(--bg-muted), var(--bg-subtle), var(--bg-muted)); background-size: 200% 100%; animation: sk 1.2s ease-in-out infinite; }
+@keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .shimmer { animation: none; background: var(--bg-muted); } }
