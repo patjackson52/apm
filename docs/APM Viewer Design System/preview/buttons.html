@@ -1,0 +1,25 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<link rel="stylesheet" href="../ui_kits/apm-viewer/app.css"/>
+<script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+<style> body { margin:0; background:var(--bg-surface); font-family:var(--font-sans); padding:22px 26px; }
+  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  h4 { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--fg-subtle); margin:0 0 14px; }
+  svg { width:14px; height:14px; }
+</style></head>
+<body class="apm-root">
+  <h4>Buttons · tabs · disabled "future" affordances</h4>
+  <div class="row">
+    <button class="btn btn-primary btn-md"><i data-lucide="refresh-cw"></i>Primary</button>
+    <button class="btn btn-default btn-md"><i data-lucide="filter"></i>Default</button>
+    <button class="btn btn-ghost btn-md"><i data-lucide="arrow-left"></i>Ghost</button>
+    <button class="btn btn-default btn-sm">Small</button>
+    <span class="icon-btn"><i data-lucide="moon"></i></span>
+  </div>
+  <div class="row">
+    <button class="btn btn-default btn-sm future-btn" disabled><i data-lucide="chevron-right"></i>Advance step<span class="future-btn__soon">soon</span></button>
+    <button class="btn btn-default btn-sm future-btn" disabled><i data-lucide="reply"></i>Answer gate<span class="future-btn__soon">soon</span></button>
+    <button class="btn btn-default btn-md" disabled>Disabled</button>
+  </div>
+  <script>lucide.createIcons();</script>
+</body></html>

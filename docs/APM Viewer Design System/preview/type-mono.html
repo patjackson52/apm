@@ -1,0 +1,24 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { margin:0; background:var(--bg-surface); color:var(--fg); font-family:var(--font-mono); padding:22px 26px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 28px; }
+  .row { display:flex; align-items:center; gap:12px; font-size:13px; }
+  .k { color:var(--fg-subtle); font-size:11px; width:74px; }
+  .v { color:var(--fg); font-variant-numeric:tabular-nums; }
+  .accent { color:var(--accent); } .green { color:var(--status-completed-fg); } .violet { color:var(--status-active-fg); }
+  h4 { font-family:var(--font-sans); font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--fg-subtle); margin:0 0 14px; }
+</style></head>
+<body class="apm-root">
+  <h4>Geist Mono · IDs, code, numbers</h4>
+  <div class="grid">
+    <div class="row"><span class="k">work item</span><span class="v accent">WI-12</span></div>
+    <div class="row"><span class="k">artifact</span><span class="v">ART-1@2</span></div>
+    <div class="row"><span class="k">run</span><span class="v violet">RUN-22</span></div>
+    <div class="row"><span class="k">lease</span><span class="v">LSE-7</span></div>
+    <div class="row"><span class="k">path</span><span class="v">~/dev/apm-core</span></div>
+    <div class="row"><span class="k">verdict</span><span class="v green">pass</span></div>
+    <div class="row"><span class="k">tabular</span><span class="v">0123456789</span></div>
+    <div class="row"><span class="k">status</span><span class="v">localhost:7842</span></div>
+  </div>
+</body></html>

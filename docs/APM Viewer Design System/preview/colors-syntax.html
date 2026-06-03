@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { margin:0; background:var(--bg-inset); font-family:var(--font-mono); padding:22px 26px; font-size:13px; line-height:1.7; }
+  .c-comment{color:var(--code-comment);font-style:italic}.c-keyword{color:var(--code-keyword)}
+  .c-string{color:var(--code-string)}.c-number{color:var(--code-number)}.c-fn{color:var(--code-function)}
+  .c-prop{color:var(--code-property)}.c-punct{color:var(--code-punct)} pre{margin:0;color:var(--code-fg)}
+</style></head>
+<body class="apm-root" data-theme="dark" style="background:var(--bg-inset)">
+<pre><span class="c-comment">// review gate must be unanimous</span>
+<span class="c-keyword">function</span> <span class="c-fn">advance</span><span class="c-punct">(</span>run<span class="c-punct">,</span> ev<span class="c-punct">)</span> <span class="c-punct">{</span>
+  <span class="c-keyword">const</span> step <span class="c-punct">=</span> run<span class="c-punct">.</span><span class="c-prop">steps</span><span class="c-punct">[</span>ev<span class="c-punct">.</span><span class="c-prop">stepId</span><span class="c-punct">];</span>
+  <span class="c-keyword">if</span> <span class="c-punct">(</span>step<span class="c-punct">.</span><span class="c-prop">retries</span> <span class="c-punct">&gt;</span> <span class="c-number">3</span><span class="c-punct">)</span> <span class="c-keyword">throw</span> <span class="c-fn">ConflictError</span><span class="c-punct">(</span><span class="c-string">"max"</span><span class="c-punct">);</span>
+  <span class="c-keyword">return</span> <span class="c-fn">complete</span><span class="c-punct">(</span>step<span class="c-punct">);</span>
+<span class="c-punct">}</span></pre>
+</body></html>

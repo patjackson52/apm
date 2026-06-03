@@ -1,0 +1,26 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { margin:0; background:var(--bg-surface); font-family:var(--font-sans); padding:20px 24px; }
+  .scale { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+  .sw { display:flex; flex-direction:column; gap:6px; }
+  .chip { height:46px; border-radius:8px; border:1px solid; }
+  .nm { font-size:11px; font-weight:600; color:var(--fg); text-transform:capitalize; }
+  .hx { font-family:var(--font-mono); font-size:10px; color:var(--fg-subtle); }
+</style></head>
+<body class="apm-root">
+  <div class="scale">
+    <div class="sw"><div class="chip" style="background:var(--status-draft-bg);border-color:var(--status-draft-border)"></div><div class="nm">Draft</div><div class="hx">slate</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-ready-bg);border-color:var(--status-ready-border)"></div><div class="nm">Ready</div><div class="hx">cyan</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-active-bg);border-color:var(--status-active-border)"></div><div class="nm">Active</div><div class="hx">violet · live</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-blocked-bg);border-color:var(--status-blocked-border)"></div><div class="nm">Blocked</div><div class="hx">red</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-completed-bg);border-color:var(--status-completed-border)"></div><div class="nm">Completed</div><div class="hx">green</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-cancelled-bg);border-color:var(--status-cancelled-border)"></div><div class="nm">Cancelled</div><div class="hx">muted</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-draft-fg)"></div><div class="hx">fg</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-ready-fg)"></div><div class="hx">fg</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-active-fg)"></div><div class="hx">fg</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-blocked-fg)"></div><div class="hx">fg</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-completed-fg)"></div><div class="hx">fg</div></div>
+    <div class="sw"><div class="chip" style="background:var(--status-cancelled-fg)"></div><div class="hx">fg</div></div>
+  </div>
+</body></html>

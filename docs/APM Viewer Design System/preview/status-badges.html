@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<link rel="stylesheet" href="../ui_kits/apm-viewer/app.css"/>
+<style>
+  body { margin:0; font-family:var(--font-sans); display:grid; grid-template-columns:1fr 1fr; }
+  .pane { padding:20px 24px; }
+  .pane.light { background:#fff; }
+  .pane.dark { background:#14171d; }
+  .badges { display:flex; flex-wrap:wrap; gap:9px; }
+  h4 { font-size:11px; letter-spacing:.04em; text-transform:uppercase; margin:0 0 14px; }
+  .light h4 { color:#878d9a; } .dark h4 { color:#6c747f; }
+</style></head>
+<body>
+  <div class="pane light" data-theme="light">
+    <h4>Light</h4>
+    <div class="badges">
+      <span class="status-badge status-active status-badge--md"><span class="status-badge__pulse"></span>Active</span>
+      <span class="status-badge status-blocked status-badge--md"><span class="status-badge__dot"></span>Blocked</span>
+      <span class="status-badge status-ready status-badge--md"><span class="status-badge__dot"></span>Ready</span>
+      <span class="status-badge status-draft status-badge--md"><span class="status-badge__dot"></span>Draft</span>
+      <span class="status-badge status-completed status-badge--md"><span class="status-badge__dot"></span>Completed</span>
+      <span class="status-badge status-cancelled status-badge--md"><span class="status-badge__dot"></span>Cancelled</span>
+    </div>
+  </div>
+  <div class="pane dark" data-theme="dark">
+    <h4>Dark</h4>
+    <div class="badges">
+      <span class="status-badge status-active status-badge--md"><span class="status-badge__pulse"></span>Active</span>
+      <span class="status-badge status-blocked status-badge--md"><span class="status-badge__dot"></span>Blocked</span>
+      <span class="status-badge status-ready status-badge--md"><span class="status-badge__dot"></span>Ready</span>
+      <span class="status-badge status-draft status-badge--md"><span class="status-badge__dot"></span>Draft</span>
+      <span class="status-badge status-completed status-badge--md"><span class="status-badge__dot"></span>Completed</span>
+      <span class="status-badge status-cancelled status-badge--md"><span class="status-badge__dot"></span>Cancelled</span>
+    </div>
+  </div>
+</body></html>

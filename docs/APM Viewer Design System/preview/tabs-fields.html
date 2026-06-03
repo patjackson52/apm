@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<link rel="stylesheet" href="../ui_kits/apm-viewer/app.css"/>
+<script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+<style> body { margin:0; background:var(--bg-surface); font-family:var(--font-sans); padding:20px 24px; display:flex; flex-direction:column; gap:16px; }
+  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  svg { width:14px; height:14px; }
+</style></head>
+<body class="apm-root">
+  <div class="tabs">
+    <button class="tab is-active"><i data-lucide="layout-panel-left"></i><span>Overview</span></button>
+    <button class="tab"><i data-lucide="file-text"></i><span>Spec</span></button>
+    <button class="tab"><i data-lucide="workflow"></i><span>Workflow</span></button>
+    <button class="tab"><i data-lucide="files"></i><span>Artifacts</span><span class="tab__count">3</span></button>
+  </div>
+  <div class="row">
+    <label class="search" style="width:280px"><i data-lucide="search"></i><input placeholder="Search…"/><span class="kbd">/</span></label>
+    <span class="field"><i data-lucide="filter"></i>All types</span>
+    <span class="fchip is-active"><span class="fchip__swatch status-active"></span>Active<span class="fchip__count">6</span></span>
+    <span class="fchip"><span class="fchip__swatch status-blocked"></span>Blocked<span class="fchip__count">1</span></span>
+  </div>
+  <script>lucide.createIcons();</script>
+</body></html>

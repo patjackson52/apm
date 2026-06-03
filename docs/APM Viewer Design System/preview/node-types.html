@@ -1,0 +1,41 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<link rel="stylesheet" href="../ui_kits/apm-viewer/app.css"/>
+<link rel="stylesheet" href="../ui_kits/apm-viewer/workflow.css"/>
+<script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+<style> body { margin:0; background:var(--bg-app);
+  background-image:radial-gradient(var(--grid-line) 1.2px,transparent 1.2px); background-size:22px 22px;
+  font-family:var(--font-sans); padding:26px; }
+  .nodes { display:flex; align-items:center; gap:30px; flex-wrap:wrap; }
+  .gnode { position:static; width:150px; }
+  svg { width:14px; height:14px; }
+</style></head>
+<body class="apm-root">
+  <div class="nodes">
+    <div class="gnode gnode--type-agent_execution">
+      <div class="gnode__head"><span class="gnode__icon"><i data-lucide="bot"></i></span><span class="gnode__title">Implementation</span></div>
+      <div class="gnode__type">Agent Execution</div>
+    </div>
+    <div class="gnode gnode--type-review_gate">
+      <div class="gnode__head"><span class="gnode__icon"><i data-lucide="users"></i></span><span class="gnode__title">Design Review</span></div>
+      <div class="gnode__type">Review Gate</div>
+      <div class="gnode__reviewers">
+        <span class="rev-chip rev-chip--pass"><span class="rev-chip__dot"></span>Architect</span>
+        <span class="rev-chip rev-chip--reject"><span class="rev-chip__dot"></span>Security</span>
+      </div>
+    </div>
+    <div class="gnode gnode--type-human_gate">
+      <div class="gnode__head"><span class="gnode__icon"><i data-lucide="user-round-check"></i></span><span class="gnode__title">Approve</span></div>
+      <div class="gnode__type">Human Gate</div>
+    </div>
+    <div class="gnode gnode--diamond gnode--type-decision">
+      <div class="gnode__head"><span class="gnode__icon"><i data-lucide="git-fork"></i></span></div>
+      <div class="gnode__type">Decision</div>
+    </div>
+    <div class="gnode gnode--type-terminal">
+      <div class="gnode__head"><span class="gnode__icon"><i data-lucide="circle-check-big"></i></span><span class="gnode__title">Complete</span></div>
+      <div class="gnode__type">Terminal</div>
+    </div>
+  </div>
+  <script>lucide.createIcons();</script>
+</body></html>

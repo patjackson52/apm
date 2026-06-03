@@ -4,3 +4,4 @@ dist/
 *.log
 *.db-wal
 *.db-shm
+.claude/worktrees/
