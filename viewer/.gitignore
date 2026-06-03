@@ -1,0 +1,12 @@
+# next
+/.next/
+/out/
+next-env.d.ts
+# typescript
+*.tsbuildinfo
+# test artifacts
+/test-results/
+/playwright-report/
+/playwright/.cache/
+# deps
+/node_modules/
