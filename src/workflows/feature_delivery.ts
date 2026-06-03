@@ -21,4 +21,7 @@ export const DEFAULT_POLICY = {
   auto_create_work_items: true,
   adr_policy: { auto_create: true, categories: ['architecture', 'storage', 'platform', 'workflow'], confidence_threshold: 85 },
   max_work_item_depth: 5,
+  // rec #4: when a work item completes, auto-activate dependents whose deps are all done.
+  // OFF by default — opt in at global or milestone-subtree scope to let the loop self-advance.
+  auto_activate_dependents: false,
 };

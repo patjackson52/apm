@@ -3,6 +3,7 @@ import { ApmError } from '../domain/errors.js';
 import { repos } from '../storage/repos.js';
 import { validateWorkflow, type WorkflowDef, stepById } from '../domain/workflow.js';
 import { completeMainStep } from '../domain/advance.js';
+import { cascadeActivateDependents } from './workflow.js';
 import { toRunView, toStepRunView, type RunView, type StepRunView } from '../domain/entities.js';
 import { REVIEW_VERDICTS, type ReviewVerdict } from '../domain/types.js';
 
@@ -16,7 +17,7 @@ export interface CompleteArgs {
 }
 
 export function complete(ctx: Ctx, a: CompleteArgs): RunView {
-  return ctx.storage.transaction('immediate', (tx) => {
+  const result = ctx.storage.transaction('immediate', (tx) => {
     const r = repos(tx);
     r.agents.ensure(a.agent);
 
@@ -56,8 +57,13 @@ export function complete(ctx: Ctx, a: CompleteArgs): RunView {
     completeMainStep(tx, def, runRow, mainStep, { artifactId: resolvedArtifactId }, a.agent);
 
     const updatedRun = r.runs.byId(a.run)!;
-    return toRunView(updatedRun, defRow.name);
+    return { view: toRunView(updatedRun, defRow.name), workItemId: runRow.work_item_id, runCompleted: updatedRun.status === 'completed' };
   });
+
+  // Post-commit: if this step completed the run (terminal) → its work item is now completed.
+  // Auto-activate dependents if policy allows (rec #4; no-op when flag is off). Own transactions.
+  if (result.runCompleted) cascadeActivateDependents(ctx, result.workItemId, a.agent);
+  return result.view;
 }
 
 export interface FailArgs {

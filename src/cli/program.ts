@@ -193,9 +193,12 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .description('Complete a work item')
     .option('--agent <name>', 'agent name')
     .action(function (this: Command, id: string, o: { agent?: string }) {
-      process.exitCode = runCommand(buildDeps(), 'work complete', (ctx) => ({
-        data: work.update(ctx, id, { status: 'completed' }, o.agent ?? 'unknown'),
-      }));
+      process.exitCode = runCommand(buildDeps(), 'work complete', (ctx) => {
+        const data = work.update(ctx, id, { status: 'completed' }, o.agent ?? 'unknown');
+        // rec #4: auto-activate dependents if policy allows (no-op when flag off)
+        workflow.cascadeActivateDependents(ctx, id, o.agent ?? 'unknown');
+        return { data };
+      });
     });
 
   workCmd

@@ -5,6 +5,7 @@ import {
   parseWorkflow, validateWorkflow, firstStep, layoutSteps, edgesOf, type WorkflowDef,
 } from '../domain/workflow.js';
 import { enterStep } from '../domain/advance.js';
+import { effectivePolicy } from '../domain/policy.js';
 import { toRunView, type RunView, type WorkflowDefView } from '../domain/entities.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -102,6 +103,33 @@ export function activate(ctx: Ctx, a: ActivateArgs): ActivateResult {
     items.push({ id, status: 'activated', run: run.id });
   }
   return { items };
+}
+
+export interface CascadeResult { activated: string[]; }
+
+/** Rec #4 (flag-gated, default OFF). When `completedWorkItemId` completes, auto-activate any
+ *  DRAFT work item that depends on it once ALL of that dependent's deps are complete — but only
+ *  if the completed item's effective policy has `auto_activate_dependents: true` (set it at the
+ *  global or milestone-subtree scope to let the loop self-advance milestones with no human gate).
+ *  Runs in its own transactions AFTER the completing tx commits (attachRun can't nest). */
+export function cascadeActivateDependents(ctx: Ctx, completedWorkItemId: string, agent: string): CascadeResult {
+  const eligible = ctx.storage.transaction('deferred', (tx) => {
+    const pol = effectivePolicy(tx, completedWorkItemId);
+    if (pol.auto_activate_dependents !== true) return [] as string[];
+    const r = repos(tx);
+    const out: string[] = [];
+    for (const depId of r.links.dependents(completedWorkItemId)) {
+      const wi = r.workItems.byId(depId);
+      if (!wi || wi.status !== 'draft') continue;          // only fresh, un-started work
+      if (r.runs.activeForWorkItem(depId)) continue;       // already running
+      const allDepsDone = r.links.dependsOn(depId).every((t) => r.workItems.byId(t)?.status === 'completed');
+      if (allDepsDone) out.push(depId);
+    }
+    return out;
+  });
+  if (eligible.length === 0) return { activated: [] };
+  const res = activate(ctx, { ids: eligible, agent });
+  return { activated: res.items.filter((i) => i.status === 'activated').map((i) => i.id) };
 }
 
 export interface AttachRunArgs { workItem: string; workflow: string; agent: string; }
