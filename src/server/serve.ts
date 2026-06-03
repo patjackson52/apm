@@ -42,11 +42,18 @@ export const ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/adr/:id', run: ({ ctx, params }) => adr.show(ctx, params.id) },
   { method: 'GET', pattern: '/api/blockers', run: ({ ctx, query }) => blocker.list(ctx, str(query, 'work-item')) },
   { method: 'GET', pattern: '/api/gates', run: ({ ctx, query }) => gate.list(ctx, { workItem: str(query, 'work-item') }) },
-  { method: 'GET', pattern: '/api/files', raw: (rc, res) => serveFile(rc.projectRoot, rc.query.get('path'), res) },
+  { method: 'GET', pattern: '/api/files', raw: (rc, res) => serveFile(rc.projectRoot, rc.query.get('path'), res, SECURITY_HEADERS) },
 ];
 
+/** Security response headers applied to every response (JSON + files). */
+export const SECURITY_HEADERS = {
+  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+  'Referrer-Policy': 'no-referrer',
+  'X-Content-Type-Options': 'nosniff',
+} as const;
+
 function writeJson(res: http.ServerResponse, statusCode: number, body: unknown): void {
-  res.writeHead(statusCode, { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' });
+  res.writeHead(statusCode, { 'Content-Type': 'application/json', ...SECURITY_HEADERS });
   res.end(JSON.stringify(body));
 }
 
@@ -59,9 +66,12 @@ export function createListener(dir: string, clock: Clock): http.RequestListener 
     const failOut = (code: 'E_NOT_FOUND' | 'E_VALIDATION' | 'E_INTERNAL', msg: string) =>
       writeJson(res, httpStatusFor(new ApmError(code, msg)), fail(new ApmError(code, msg), buildMeta(cmd, clock)));
 
-    // Anti-DNS-rebind: only localhost Host headers
+    // Anti-DNS-rebind: only localhost Host headers (IPv4 loopback only; an IPv6 `::1` Host would be rejected — intentional, server binds 127.0.0.1)
     const host = String(req.headers.host ?? '').split(':')[0];
     if (host !== 'localhost' && host !== '127.0.0.1') { writeJson(res, 403, fail(new ApmError('E_VALIDATION', 'forbidden host'), buildMeta(cmd, clock))); return; }
+
+    // No CORS preflight — same-origin only, read-only API
+    if (req.method === 'OPTIONS') { writeJson(res, 405, fail(new ApmError('E_VALIDATION', 'method not allowed'), buildMeta(cmd, clock))); return; }
 
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     const m = matchRoute(ROUTES, req.method ?? 'GET', url.pathname);

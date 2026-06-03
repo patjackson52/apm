@@ -35,14 +35,16 @@ export function resolveFilePath(projectRoot: string, rel: string | null | undefi
 }
 
 /** Serve an allowlisted image file, or 404 for any rejection (no info leak). */
-export function serveFile(projectRoot: string, rel: string | null | undefined, res: http.ServerResponse): void {
+export function serveFile(projectRoot: string, rel: string | null | undefined, res: http.ServerResponse, baseHeaders: Record<string, string> = {}): void {
   const p = resolveFilePath(projectRoot, rel);
   if (!p) { res.writeHead(404); res.end(); return; }
   const ext = path.extname(p).toLowerCase();
   const headers: Record<string, string> = {
+    ...baseHeaders,
     'Content-Type': contentTypeFor(ext),
     'X-Content-Type-Options': 'nosniff',
   };
+  // SVG gets the stricter sandboxing CSP (overrides any base CSP).
   if (ext === '.svg') headers['Content-Security-Policy'] = "default-src 'none'; sandbox";
   res.writeHead(200, headers);
   res.end(fs.readFileSync(p));

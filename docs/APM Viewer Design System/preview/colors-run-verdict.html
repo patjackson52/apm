@@ -1,0 +1,32 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { margin:0; background:var(--bg-surface); font-family:var(--font-sans); padding:20px 24px; display:flex; flex-direction:column; gap:16px; }
+  h4 { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--fg-subtle); margin:0 0 10px; }
+  .grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+  .sw { display:flex; flex-direction:column; gap:5px; }
+  .chip { height:38px; border-radius:7px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
+  .nm { font-size:10.5px; color:var(--fg-muted); }
+</style></head>
+<body class="apm-root">
+  <div>
+    <h4>Run / step status</h4>
+    <div class="grid">
+      <div class="sw"><div class="chip" style="background:var(--status-completed-bg);color:var(--run-completed)">✓</div><div class="nm">completed</div></div>
+      <div class="sw"><div class="chip" style="background:var(--status-active-bg);color:var(--run-active)">●</div><div class="nm">running</div></div>
+      <div class="sw"><div class="chip" style="background:var(--bg-muted);color:var(--run-pending)">○</div><div class="nm">pending</div></div>
+      <div class="sw"><div class="chip" style="background:var(--status-blocked-bg);color:var(--run-failed)">✕</div><div class="nm">failed</div></div>
+      <div class="sw"><div class="chip" style="background:var(--bg-subtle);color:var(--run-skipped)">–</div><div class="nm">skipped</div></div>
+    </div>
+  </div>
+  <div>
+    <h4>Reviewer verdicts · gate (amber)</h4>
+    <div class="grid">
+      <div class="sw"><div class="chip" style="background:var(--status-completed-bg);color:var(--verdict-pass)">pass</div><div class="nm">pass</div></div>
+      <div class="sw"><div class="chip" style="background:var(--status-blocked-bg);color:var(--verdict-reject)">reject</div><div class="nm">reject</div></div>
+      <div class="sw"><div class="chip" style="background:var(--status-cancelled-bg);color:var(--verdict-abstain)">abstain</div><div class="nm">abstain</div></div>
+      <div class="sw"><div class="chip" style="background:var(--gate-bg);color:var(--gate-fg);border-color:var(--gate-border)">gate</div><div class="nm">awaiting human</div></div>
+      <div class="sw"><div class="chip" style="background:var(--gate-fg);color:#fff">●</div><div class="nm">gate-fg</div></div>
+    </div>
+  </div>
+</body></html>

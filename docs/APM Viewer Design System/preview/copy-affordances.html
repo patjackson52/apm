@@ -1,0 +1,31 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<link rel="stylesheet" href="../ui_kits/apm-viewer/app.css"/>
+<script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+<style> body { margin:0; background:var(--bg-surface); font-family:var(--font-sans); padding:20px 24px; }
+  .row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  h4 { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--fg-subtle); margin:0 0 6px; }
+  .lab { font-size:11px; color:var(--fg-subtle); width:120px; flex:0 0 auto; }
+  svg { width:13px; height:13px; }
+</style></head>
+<body class="apm-root">
+  <h4>Copy &amp; clipboard affordances</h4>
+  <div class="row"><span class="lab">click-to-copy id</span>
+    <span class="id-chip"><span class="mono id-chip__val">WI-12</span><span class="id-chip__icon"><i data-lucide="copy"></i></span></span>
+    <span class="id-chip is-copied"><span class="mono id-chip__val">ART-1@2</span><span class="id-chip__icon"><i data-lucide="check"></i></span></span>
+  </div>
+  <div class="row"><span class="lab">copy button</span>
+    <button class="btn btn-ghost btn-sm copy-btn"><i data-lucide="copy"></i></button>
+    <button class="btn btn-default btn-sm copy-btn"><i data-lucide="copy"></i><span>Copy</span></button>
+    <button class="btn btn-default btn-sm copy-btn is-copied"><i data-lucide="check"></i><span>Copied</span></button>
+  </div>
+  <div class="row"><span class="lab">document menu</span>
+    <span class="copy-split">
+      <button class="btn btn-default btn-sm copy-split__main"><i data-lucide="clipboard-copy"></i><span>Copy doc</span></button>
+      <button class="btn btn-default btn-sm copy-split__caret"><i data-lucide="chevron-down"></i></button>
+    </span>
+    <span class="md-tool"><i data-lucide="hash"></i>MD</span>
+    <span class="md-tool"><i data-lucide="table"></i>CSV</span>
+  </div>
+  <script>lucide.createIcons();</script>
+</body></html>

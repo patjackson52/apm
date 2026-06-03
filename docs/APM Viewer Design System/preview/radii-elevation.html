@@ -1,0 +1,28 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { margin:0; background:var(--bg-surface); font-family:var(--font-sans); padding:22px 26px; display:flex; gap:30px; }
+  .col { display:flex; gap:16px; }
+  .item { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .box { width:60px; height:60px; background:var(--accent-bg); border:1.5px solid var(--accent-border); }
+  .lab { font-family:var(--font-mono); font-size:10px; color:var(--fg-subtle); }
+  .shadow { width:96px; height:60px; background:var(--bg-surface); border:1px solid var(--border); border-radius:10px; }
+  h4 { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--fg-subtle); margin:0 0 14px; width:100%; }
+  .grp { flex:1; }
+</style></head>
+<body class="apm-root">
+  <div class="grp"><h4>Radii</h4><div class="col">
+    <div class="item"><div class="box" style="border-radius:3px"></div><span class="lab">xs 3</span></div>
+    <div class="item"><div class="box" style="border-radius:5px"></div><span class="lab">sm 5</span></div>
+    <div class="item"><div class="box" style="border-radius:7px"></div><span class="lab">md 7</span></div>
+    <div class="item"><div class="box" style="border-radius:10px"></div><span class="lab">lg 10</span></div>
+    <div class="item"><div class="box" style="border-radius:14px"></div><span class="lab">xl 14</span></div>
+    <div class="item"><div class="box" style="border-radius:999px"></div><span class="lab">pill</span></div>
+  </div></div>
+  <div class="grp"><h4>Elevation</h4><div class="col">
+    <div class="item"><div class="shadow" style="box-shadow:var(--shadow-sm)"></div><span class="lab">sm</span></div>
+    <div class="item"><div class="shadow" style="box-shadow:var(--shadow-md)"></div><span class="lab">md</span></div>
+    <div class="item"><div class="shadow" style="box-shadow:var(--shadow-lg)"></div><span class="lab">lg</span></div>
+    <div class="item"><div class="shadow" style="box-shadow:var(--shadow-pop)"></div><span class="lab">pop</span></div>
+  </div></div>
+</body></html>

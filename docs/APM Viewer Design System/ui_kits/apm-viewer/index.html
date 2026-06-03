@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APM Viewer — api-ui</title>
+  <link rel="stylesheet" href="../../colors_and_type.css" />
+  <link rel="stylesheet" href="app.css" />
+  <link rel="stylesheet" href="screens.css" />
+  <link rel="stylesheet" href="workflow.css" />
+  <link rel="stylesheet" href="markdown.css" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="data.js"></script>
+  <script src="doc_content.js"></script>
+  <script src="doc_content_extra.js"></script>
+  <script>
+    window.APM_LOGO = `<svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="0.5" y="0.5" width="31" height="31" rx="8" fill="currentColor" fill-opacity="0.10" stroke="currentColor" stroke-opacity="0.22"/><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 16 H13" stroke-opacity="0.55"/><path d="M18.5 11.5 L15.5 14.5" stroke-opacity="0.55"/><path d="M18.5 20.5 L15.5 17.5" stroke-opacity="0.55"/></g><circle cx="8" cy="16" r="2.6" fill="currentColor"/><circle cx="14.5" cy="16" r="2.2" fill="currentColor" fill-opacity="0.85"/><rect x="19" y="8.6" width="5.4" height="5.4" rx="1.6" fill="currentColor" fill-opacity="0.7"/><rect x="19" y="18" width="5.4" height="5.4" rx="2.7" fill="currentColor"/></svg>`;
+  </script>
+  <script type="text/babel" src="icons.jsx"></script>
+  <script type="text/babel" src="primitives.jsx"></script>
+  <script type="text/babel" src="shell.jsx"></script>
+  <script type="text/babel" src="screen_dashboard.jsx"></script>
+  <script type="text/babel" src="screen_workitems.jsx"></script>
+  <script type="text/babel" src="screen_detail.jsx"></script>
+  <script type="text/babel" src="screen_workflow.jsx"></script>
+  <script type="text/babel" src="screen_markdown.jsx"></script>
+  <script type="text/babel" src="screen_artifacts.jsx"></script>
+  <script type="text/babel" src="screen_blockers.jsx"></script>
+  <script type="text/babel" src="screen_states.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

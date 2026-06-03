@@ -1,0 +1,32 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<link rel="stylesheet" href="../ui_kits/apm-viewer/app.css"/>
+<link rel="stylesheet" href="../ui_kits/apm-viewer/screens.css"/>
+<script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+<style> body { margin:0; background:var(--bg-app); font-family:var(--font-sans); padding:20px 24px; }
+  svg { width:14px; height:14px; }
+  .est-badge, .prio { vertical-align:middle; }
+</style></head>
+<body class="apm-root">
+  <div class="wi-table" style="max-width:640px">
+    <div class="wi-head">
+      <div class="wi-cell wi-cell--tree">Item</div><div class="wi-cell wi-cell--id">ID</div>
+      <div class="wi-cell wi-cell--status">Status</div><div class="wi-cell wi-cell--est">Est</div><div class="wi-cell wi-cell--run">Run</div>
+    </div>
+    <div class="wi-row">
+      <div class="wi-cell wi-cell--tree"><i data-lucide="sparkles" style="color:var(--status-active-fg)"></i><span class="wi-row__title">Feature-delivery workflow</span></div>
+      <div class="wi-cell wi-cell--id"><span class="id-chip"><span class="mono id-chip__val">WI-5</span></span></div>
+      <div class="wi-cell wi-cell--status"><span class="status-badge status-active status-badge--sm"><span class="status-badge__pulse"></span>Active</span></div>
+      <div class="wi-cell wi-cell--est"><span class="est-badge est-L">L</span></div>
+      <div class="wi-cell wi-cell--run"><span class="run-progress run-progress--compact"><span class="run-progress__bar"><span class="run-progress__seg seg-completed"></span><span class="run-progress__seg seg-completed"></span><span class="run-progress__seg seg-running"></span><span class="run-progress__seg"></span><span class="run-progress__seg"></span></span></span></div>
+    </div>
+    <div class="wi-row">
+      <div class="wi-cell wi-cell--tree" style="padding-left:20px"><i data-lucide="square-check-big" style="color:var(--fg-subtle)"></i><span class="wi-row__title">Reviewer-verdict aggregation</span></div>
+      <div class="wi-cell wi-cell--id"><span class="id-chip"><span class="mono id-chip__val">WI-10</span></span></div>
+      <div class="wi-cell wi-cell--status"><span class="status-badge status-ready status-badge--sm"><span class="status-badge__dot"></span>Ready</span></div>
+      <div class="wi-cell wi-cell--est"><span class="est-badge est-S">S</span></div>
+      <div class="wi-cell wi-cell--run"><span class="subtle">—</span></div>
+    </div>
+  </div>
+  <script>lucide.createIcons();</script>
+</body></html>
