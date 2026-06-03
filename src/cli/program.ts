@@ -148,6 +148,17 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     });
 
   workCmd
+    .command('activate <ids...>')
+    .description('Attach a workflow + promote to ready so items become dispatchable (batch, idempotent)')
+    .option('--workflow <name>', 'workflow to attach', 'feature_delivery')
+    .option('--agent <name>', 'agent name')
+    .action(function (this: Command, ids: string[], o: { workflow?: string; agent?: string }) {
+      process.exitCode = runCommand(buildDeps(), 'work activate', (ctx) => ({
+        data: workflow.activate(ctx, { ids, workflow: o.workflow, agent: o.agent ?? 'unknown' }),
+      }));
+    });
+
+  workCmd
     .command('link <id>')
     .description('Add a dependency link')
     .requiredOption('--depends-on <target>', 'target work item id')

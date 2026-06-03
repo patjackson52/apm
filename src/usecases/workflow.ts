@@ -72,6 +72,38 @@ export function register(ctx: Ctx, defObjOrYaml: string | object) {
 
 // ─── run operations ────────────────────────────────────────────────────────────
 
+export const DEFAULT_WORKFLOW = 'feature_delivery';
+
+export interface ActivateArgs { ids: string[]; workflow?: string; agent: string; }
+export type ActivateStatus = 'activated' | 'already_active' | 'skipped';
+export interface ActivateItem { id: string; status: ActivateStatus; run?: string; reason?: string; }
+export interface ActivateResult { items: ActivateItem[]; }
+
+/** Batch-activate work items: attach the (default) workflow + promote draft→ready so the
+ *  scheduler can dispatch them. Idempotent; skips unknown/terminal items with a reason.
+ *  Rec #6 — one ergonomic step instead of per-item `work update` + `workflow attach`. */
+export function activate(ctx: Ctx, a: ActivateArgs): ActivateResult {
+  const workflow = a.workflow ?? DEFAULT_WORKFLOW;
+  const items: ActivateItem[] = [];
+  for (const id of a.ids) {
+    // read current state in a short deferred tx, then attach in attachRun's own immediate tx
+    const state = ctx.storage.transaction('deferred', (tx) => {
+      const r = repos(tx);
+      const wi = r.workItems.byId(id);
+      if (!wi) return { kind: 'not_found' as const };
+      if (wi.status === 'completed' || wi.status === 'cancelled') return { kind: 'terminal' as const };
+      const existing = r.runs.activeForWorkItem(id);
+      return existing ? { kind: 'active' as const, run: existing.id } : { kind: 'eligible' as const };
+    });
+    if (state.kind === 'not_found') { items.push({ id, status: 'skipped', reason: 'not_found' }); continue; }
+    if (state.kind === 'terminal') { items.push({ id, status: 'skipped', reason: 'terminal' }); continue; }
+    if (state.kind === 'active') { items.push({ id, status: 'already_active', run: state.run }); continue; }
+    const run = attachRun(ctx, { workItem: id, workflow, agent: a.agent });
+    items.push({ id, status: 'activated', run: run.id });
+  }
+  return { items };
+}
+
 export interface AttachRunArgs { workItem: string; workflow: string; agent: string; }
 
 export function attachRun(ctx: Ctx, a: AttachRunArgs): RunView {
