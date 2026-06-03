@@ -1,8 +1,20 @@
 import type {
   WorkItemType, WorkItemStatus, Estimate, SessionStatus, LeaseStatus, ArtifactStatus, ArtifactType,
 } from './types.js';
+import type { StepDef } from './workflow.js';
 
 export interface Page<T> { items: T[]; page: { total: number; limit: number; offset: number; has_more: boolean }; }
+
+/** A workflow step enriched with viewer layout (x/y/label). */
+export type StepView = StepDef & { x: number; y: number; label: string };
+
+/** Full workflow definition view for `workflow show` / apm serve `GET /api/workflows/:id`. */
+export interface WorkflowDefView {
+  id: string; name: string; version: number; status: string; created_at: string;
+  applies_to: WorkItemType[];
+  steps: StepView[];
+  edges: { from: string; to: string }[];
+}
 
 export interface WorkItemView {
   id: string; type: WorkItemType; title: string; description: string | null;
