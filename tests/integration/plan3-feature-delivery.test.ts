@@ -120,49 +120,36 @@ describe('feature_delivery e2e workflow', () => {
     expect(bView.unmet_dependencies).toHaveLength(0);
   });
 
-  it('review reject blocks, blocker.resolve reopens that reviewer, re-review pass advances', () => {
-    // Setup through brainstorm and design
+  it('review reject self-heals: re-opens design, redo design then re-review pass advances', () => {
     const wi = work.create(ctx(), { type: 'feature', title: 'Test feature', agent: 'claude' });
     const run = workflow.attachRun(ctx(), { workItem: wi.id, workflow: 'feature_delivery', agent: 'claude' });
 
-    // Complete brainstorm
     artifact.create(ctx(), { workItem: wi.id, type: 'decision', title: 'D', body: 'x', agent: 'claude' });
     artifact.create(ctx(), { workItem: wi.id, type: 'spec', title: 'S', body: 'x', agent: 'claude' });
     step.complete(ctx(), { run: run.id, step: 'brainstorm', agent: 'claude' });
 
-    // Complete design
     artifact.create(ctx(), { workItem: wi.id, type: 'design', title: 'Design', body: 'x', agent: 'claude' });
     step.complete(ctx(), { run: run.id, step: 'design', agent: 'claude' });
 
-    // Now at design_review — architecture pass, security reject, simplicity pass
-    // (all 3 must complete for gate to evaluate: new semantics — no early block on single reject)
+    // design_review: arch pass, security reject, simplicity pass — design_review has on_reject:'design'
     step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'architecture', verdict: 'pass', agent: 'claude' });
     step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'security', verdict: 'reject', agent: 'claude' });
-    const afterAllSubmit = step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'simplicity', verdict: 'pass', agent: 'claude' });
+    const afterReject = step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'simplicity', verdict: 'pass', agent: 'claude' });
 
-    // All 3 complete, security rejected → review_disagreement blocker
-    const wiBlocked = work.show(ctx(), wi.id);
-    expect(wiBlocked.status).toBe('blocked');
-    expect(wiBlocked.blocker_ids.length).toBeGreaterThan(0);
+    // Self-heal: NOT blocked; design re-opened; no review_disagreement blocker
+    expect(work.show(ctx(), wi.id).status).not.toBe('blocked');
+    expect(afterReject.current_step).toBe('design');
+    const open = work.blockers(ctx(), wi.id).open_blockers;
+    expect(open.find((b) => b.type === 'review_disagreement')).toBeUndefined();
 
-    // Run is still on design_review
-    expect(afterAllSubmit.current_step).toBe('design_review');
+    // Revise the design + complete → flows back to a fresh design_review
+    artifact.create(ctx(), { workItem: wi.id, type: 'design', title: 'Design v2', body: 'fixed', agent: 'claude' });
+    step.complete(ctx(), { run: run.id, step: 'design', agent: 'claude' });
 
-    // Resolve the review_disagreement blocker → reopens security reviewer only
-    const openBlockers = work.blockers(ctx(), wi.id);
-    expect(openBlockers.open_blockers.length).toBeGreaterThan(0);
-    const reviewBlocker = openBlockers.open_blockers.find((b) => b.type === 'review_disagreement');
-    expect(reviewBlocker).toBeTruthy();
-
-    blocker.resolve(ctx(), reviewBlocker!.id, { resolution: 'addressed concerns', agent: 'claude' });
-
-    // Work item should be unblocked
-    const wiUnblocked = work.show(ctx(), wi.id);
-    expect(wiUnblocked.status).toBe('ready');
-
-    // Re-review security with pass → all required roles (arch, security, simplicity) now
-    // have latest-round completed with pass → gate advances to planning
-    const afterAllPass = step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'security', verdict: 'pass', agent: 'claude' });
-    expect(afterAllPass.current_step).toBe('planning');
+    // Re-review: all three pass → advances to planning
+    step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'architecture', verdict: 'pass', agent: 'claude' });
+    step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'security', verdict: 'pass', agent: 'claude' });
+    const afterPass = step.review(ctx(), { run: run.id, step: 'design_review', reviewer: 'simplicity', verdict: 'pass', agent: 'claude' });
+    expect(afterPass.current_step).toBe('planning');
   });
 });

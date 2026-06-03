@@ -327,6 +327,16 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     });
 
   stepCmd
+    .command('revise <runId> <stepId>')
+    .description('Re-open a rejected review_gate\'s on_reject source step for revision')
+    .requiredOption('--agent <name>', 'agent name')
+    .action(function (this: Command, runId: string, stepId: string, o: { agent: string }) {
+      process.exitCode = runCommand(buildDeps(), 'step revise', (ctx) => ({
+        data: step.revise(ctx, { run: runId, step: stepId, agent: o.agent }),
+      }));
+    });
+
+  stepCmd
     .command('review <runId> <stepId>')
     .description('Submit a review verdict for a review_gate step')
     .requiredOption('--reviewer <role>', 'reviewer role')
