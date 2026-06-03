@@ -2,7 +2,8 @@ import type { Ctx } from '../cli/run.js';
 
 export interface RouteCtx { ctx: Ctx; params: Record<string, string>; query: URLSearchParams; }
 export type RouteRun = (rc: RouteCtx) => unknown;
-export interface Route { method: string; pattern: string; run: RouteRun; }
+export type RawRun = (rc: { projectRoot: string; query: URLSearchParams }, res: import('node:http').ServerResponse) => void;
+export interface Route { method: string; pattern: string; run?: RouteRun; raw?: RawRun; }
 
 export type MatchResult =
   | { route: Route; params: Record<string, string> }
