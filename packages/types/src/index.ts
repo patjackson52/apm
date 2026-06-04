@@ -20,3 +20,4 @@ export type LeaseView = z.infer<typeof V.LeaseViewSchema>;
 export type WorkflowDefSummary = z.infer<typeof V.WorkflowDefSummarySchema>;
 export type WorkflowDefView = z.infer<typeof V.WorkflowDefViewSchema>;
 export type StatusView = z.infer<typeof V.StatusViewSchema>;
+export type ImageView = z.infer<typeof V.ImageViewSchema>;

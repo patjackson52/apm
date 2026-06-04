@@ -187,6 +187,27 @@ export const WorkflowDefViewSchema = z.object({
   edges: z.array(z.object({ from: z.string(), to: z.string() }).strict()),
 }).strict();
 
+export const ImageViewSchema = z.object({
+  id: z.string(),
+  version: z.number(),
+  status: z.string(),
+  root: z.string(),
+  supersedes: z.string().nullable(),
+  kind: z.string(),
+  blob: z.string(),
+  mime: z.string(),
+  ext: z.string(),
+  width: z.number().nullable(),
+  height: z.number().nullable(),
+  byte_size: z.number(),
+  alt: z.string().nullable(),
+  capture: z.record(z.unknown()).nullable(),
+  path: z.string(),
+  created_by: z.string().nullable(),
+  created_at: z.string(),
+  work_item: z.string().nullable(),
+}).strict();
+
 // /api/status — StatusResult (serve enrichedStatus enriches active_leases + open_blockers)
 export const AwaitsHumanSchema = z.object({ id: z.string(), reason: z.string() }).strict();
 
