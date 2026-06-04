@@ -22,6 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Runs: `apm run cancel <runId>`
 - Steps: `apm step complete <run> <step> --agent <a> [--artifact <id> | --artifact-type <t> --body-file <f>]` · `step fail <run> <step> --reason <r> --agent <a>` · `step retry <run> <step> --agent <a>` · `step review <run> <step> --reviewer <role> --verdict <v> --agent <a> [--artifact <id>]`
 - Artifacts: `apm artifact create --work-item <wi> --type <t> --title <s> --body-file <f> --agent <a>` · `artifact show <id>` · `artifact revise <id> --body-file <f> --agent <a>` · `artifact list --work-item <wi>` · `artifact submit <id>` · `artifact approve <id>` · `artifact archive <id>`
+- Images: `apm image add --work-item <wi> --file <path> [--kind screenshot] [--alt <s>] --agent <a>` · `image show <id>` · `image list --work-item <wi>` · `image revise <id> --file <f> --agent <a>` · `image find --blob <sha>` · `image pair <a> <b>` · `image save <id> --to <p>` · `image embed <id> [--resolve]` · `image copy <id>` · `image open <id>`
 - Decisions: `apm decision create --work-item <wi> --question <q> --options <csv> --recommendation <r> --confidence <n> --category <c> --agent <a>` · `decision accept <id> --choice <c> --agent <a>` · `decision reject <id> --agent <a>`
 - ADRs: `apm adr create-from-decision <decId> --agent <a>` · `adr list` · `adr show <id>`
 - Blockers: `apm blocker create <wi> --type <t> --reason <r> --agent <a>` · `blocker resolve <id> --resolution <r> --agent <a>`
@@ -83,7 +84,7 @@ planning → implementation → pr_create → pr_monitor → merge → complete
 Full command surface in `docs/CLI Command Specification.md`. Key invariants when implementing:
 
 - **Every read command supports `--format human|json|yaml|agent`.** Default `human` interactively, `json` for agent scripts.
-- ID prefixes by type: `WI-` work items, `LEASE-`, `S-` sessions, `WR-` workflow runs, `ART-` artifacts, `DEC-` decisions, `ADR-`, `BLK-` blockers, `HG-` human gates.
+- ID prefixes by type: `WI-` work items, `LEASE-`, `S-` sessions, `WR-` workflow runs, `ART-` artifacts, `IMG-` images, `DEC-` decisions, `ADR-`, `BLK-` blockers, `HG-` human gates.
 - Command groups: `apm work|next|lease|session|workflow|step|artifact|decision|adr|blocker|gate(s)`.
 - Artifacts are revised via `apm artifact revise` (creates a new version), never mutated in place.
   
