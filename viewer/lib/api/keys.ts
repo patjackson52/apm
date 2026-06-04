@@ -20,4 +20,5 @@ export const qk = {
   gates: (wi?: string) => ['gates', wi ?? null] as const,
   leases: (f: { workItem?: string; agent?: string } = {}) => ['leases', f] as const,
   events: (f: EventsFilter = {}) => ['events', f] as const,
+  sessions: () => ['sessions'] as const,
 };

@@ -3,7 +3,7 @@ import {
   envelopeSchema, pageSchema,
   StatusViewSchema, WorkItemViewSchema, RunViewSchema, StepRunViewSchema,
   ArtifactViewSchema, DecisionViewSchema, WorkBlockersSchema, EnrichedBlockerViewSchema,
-  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, EventViewSchema,
+  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, EventViewSchema, SessionViewSchema,
 } from '@apm/types';
 
 const qs = (params: Record<string, string | number | undefined>): string => {
@@ -35,6 +35,7 @@ export const ep = {
   gates: { path: (workItem?: string) => `/api/gates${qs({ 'work-item': workItem })}`, schema: z.array(EnrichedBlockerViewSchema) },
   leases: { path: (f: { workItem?: string; agent?: string } = {}) => `/api/leases${qs({ 'work-item': f.workItem, agent: f.agent })}`, schema: z.object({ items: z.array(LeaseViewSchema) }).strict() },
   events: { path: (f: EventsFilter = {}) => `/api/events${qs({ 'entity-type': f.entityType, 'entity-id': f.entityId, limit: f.limit, offset: f.offset })}`, schema: pageSchema(EventViewSchema) },
+  sessions: { path: () => '/api/sessions', schema: z.array(SessionViewSchema) },
 } as const;
 
 export interface EventsFilter { entityType?: string; entityId?: string; limit?: number; offset?: number; }
