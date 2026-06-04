@@ -87,7 +87,25 @@ function renderAgent(envelope: Envelope<any>): string {
       lines.push('');
       lines.push('REQUIRED_CONTEXT:');
       for (const ctx of d.required_context) {
-        lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" — ${ctx.one_line}`);
+        if (ctx.path) {
+          lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" [image]`);
+          lines.push(`  path: ${ctx.path}`);
+          if (ctx.alt) lines.push(`  alt:  ${ctx.alt}`);
+        } else {
+          lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" — ${ctx.one_line}`);
+        }
+      }
+    }
+
+    if (Array.isArray(d.required_captures) && d.required_captures.length > 0) {
+      lines.push('');
+      lines.push('REQUIRED_CAPTURES:');
+      for (const c of d.required_captures) {
+        const parts = [c.name, `kind=${c.kind}`];
+        if (c.route) parts.push(`route=${c.route}`);
+        if (c.viewport) parts.push(`viewport=${c.viewport.w}x${c.viewport.h}`);
+        if (c.prompt) parts.push(`recipe=${c.prompt}`);
+        lines.push(parts.join('  '));
       }
     }
 
