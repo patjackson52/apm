@@ -3,17 +3,23 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import { apiGet } from './client';
 import { ep, type WorkFilters } from './endpoints';
 import { qk } from './keys';
+import { useActiveProject } from '@/lib/project/ActiveProjectProvider';
 
 const VOLATILE = 5000;
 const SEMI = 10000;
 type Opt = { refetchInterval?: number | false };
 
-const useApiQuery = <T,>(key: readonly unknown[], path: string, schema: Parameters<typeof apiGet<T>>[1], poll: number | false, o?: Opt) =>
-  useQuery({
-    queryKey: key as unknown[],
-    queryFn: () => apiGet<T>(path, schema),
+const useApiQuery = <T,>(key: readonly unknown[], path: string, schema: Parameters<typeof apiGet<T>>[1], poll: number | false, o?: Opt) => {
+  const activeId = useActiveProject();
+  const sep = path.includes('?') ? '&' : '?';
+  const scopedPath = activeId ? `${path}${sep}project=${encodeURIComponent(activeId)}` : path;
+  const scopedKey = activeId ? (['project', activeId, ...key] as unknown[]) : (key as unknown[]);
+  return useQuery({
+    queryKey: scopedKey,
+    queryFn: () => apiGet<T>(scopedPath, schema),
     refetchInterval: o?.refetchInterval ?? poll,
   } as UseQueryOptions<T>);
+};
 
 export const useStatus = (o?: Opt) => useApiQuery(qk.status(), ep.status.path(), ep.status.schema, VOLATILE, o);
 export const useWorkItems = (f: WorkFilters = {}, o?: Opt) => useApiQuery(qk.work(f), ep.work.path(f), ep.work.schema, SEMI, o);
@@ -34,3 +40,4 @@ export const useGates = (wi?: string, o?: Opt) => useApiQuery(qk.gates(wi), ep.g
 export const useLeases = (f: { workItem?: string; agent?: string } = {}, o?: Opt) => useApiQuery(qk.leases(f), ep.leases.path(f), ep.leases.schema, VOLATILE, o);
 export const useEvents = (f: import('./endpoints').EventsFilter = {}, o?: Opt) => useApiQuery(qk.events(f), ep.events.path(f), ep.events.schema, VOLATILE, o);
 export const useSessions = (o?: Opt) => useApiQuery(qk.sessions(), ep.sessions.path(), ep.sessions.schema, SEMI, o);
+export const useProjects = (o?: Opt) => useApiQuery(qk.projects(), ep.projects.path(), ep.projects.schema, SEMI, o);

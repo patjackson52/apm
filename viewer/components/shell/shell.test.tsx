@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/work' }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/work', useRouter: () => ({ replace: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode } & Record<string, unknown>) => <a href={href} {...p}>{children}</a> }));
 
 import { renderWithClient } from '@/test/renderWithClient';
+vi.mock('@/lib/api/hooks', () => ({ useProjects: () => ({ data: [{ id: 'apm', name: 'apm', path: '/p', current: true }, { id: 'other', name: 'other', path: '/o', current: false }] }) }));
+
 import { Sidebar } from './Sidebar';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import { AppShell } from './AppShell';
@@ -25,10 +27,12 @@ describe('Sidebar', () => {
 });
 
 describe('ProjectSwitcher', () => {
-  it('shows project name + a disabled "soon" switch (single-project M1)', () => {
-    render(<ProjectSwitcher project="apm" />);
-    expect(screen.getByText('apm')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /multi-project soon/i })).toBeDisabled();
+  it('renders a project switch dropdown listing registered projects', () => {
+    renderWithClient(<ProjectSwitcher />);
+    const select = screen.getByRole('combobox', { name: 'Switch project' });
+    expect(select).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'apm (current)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'other' })).toBeInTheDocument();
   });
 });
 
