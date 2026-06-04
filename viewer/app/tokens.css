@@ -149,13 +149,6 @@
   --gate-bg:     #fdf0db;
   --gate-border: #f5dca5;
 
-  /* Run / step status (workflow nodes) */
-  --run-completed: var(--status-completed-fg);
-  --run-active:    var(--status-active-fg);
-  --run-pending:   #9aa1ad;
-  --run-failed:    var(--status-blocked-fg);
-  --run-skipped:   #b6bcc6;
-
   /* Reviewer verdicts */
   --verdict-pass:    #18794e;
   --verdict-reject:  #d12a3a;
@@ -233,19 +226,13 @@
   --status-completed-bg:    #0f2920;
   --status-completed-border:#1d4d39;
 
-  --status-cancelled-fg:    #767e8c;
+  --status-cancelled-fg:    #7e8694;  /* WI-39: 4.08->4.55:1 on -bg (WCAG AA) */
   --status-cancelled-bg:    #1a1e26;
   --status-cancelled-border:#2b313b;
 
   --gate-fg:     #f0b94f;
   --gate-bg:     #2c2310;
   --gate-border: #574420;
-
-  --run-completed: var(--status-completed-fg);
-  --run-active:    var(--status-active-fg);
-  --run-pending:   #5c6470;
-  --run-failed:    var(--status-blocked-fg);
-  --run-skipped:   #454b56;
 
   --verdict-pass:    #3ecf8e;
   --verdict-reject:  #ff6b78;
