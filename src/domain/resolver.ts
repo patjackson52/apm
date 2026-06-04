@@ -33,12 +33,11 @@ export function selectCandidates(candidates: Candidate[], caller: Caller, _now: 
   if (candidates.length === 0) return { status: 'drained' };
 
   const dispatchable: Candidate[] = [];
-  let sawDeps = false, sawLeased = false, sawCaps = false, sawHuman = false, sawPending = false;
+  let sawDeps = false, sawLeased = false, sawCaps = false, sawHuman = false;
 
   for (const c of candidates) {
     if (c.blockedByHumanGate) { sawHuman = true; continue; }
     if (!c.hasPendingStep) continue;
-    sawPending = true;
     if (!c.depsAllComplete) { sawDeps = true; continue; }
     if (c.leaseLive && c.leaseHolderAgent !== caller.agent) { sawLeased = true; continue; }
     if (!capsMatch(c.requiredCaps, caller)) { sawCaps = true; continue; }
@@ -54,7 +53,6 @@ export function selectCandidates(candidates: Candidate[], caller: Caller, _now: 
   if (sawLeased) return { status: 'idle', reason: 'all_leased', retryAfter: 30 };
   if (sawCaps) return { status: 'idle', reason: 'capability_mismatch', retryAfter: 60 };
   if (sawHuman) return { status: 'idle', reason: 'awaiting_human', retryAfter: 0 };
-  void sawPending; // mirrors selectCandidate — declared for symmetry
   return { status: 'drained' };
 }
 
