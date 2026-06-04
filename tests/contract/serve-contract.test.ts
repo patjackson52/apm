@@ -18,7 +18,7 @@ import {
   envelopeSchema, pageSchema,
   WorkItemViewSchema, RunViewSchema, StepRunViewSchema, ArtifactViewSchema,
   DecisionViewSchema, BlockerViewSchema, EnrichedBlockerViewSchema, WorkBlockersSchema,
-  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, StatusViewSchema, EventViewSchema, SessionViewSchema,
+  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, StatusViewSchema, EventViewSchema, SessionViewSchema, ProjectViewSchema,
 } from '@apm/types';
 
 const clock = fixedClock('2026-06-03T12:00:00.000Z');
@@ -73,4 +73,13 @@ describe('apm serve ↔ @apm/types contract', () => {
   it('/api/leases ({items}, no page wrapper)', () => check('/api/leases', z.object({ items: z.array(LeaseViewSchema) }).strict()));
   it('/api/events (page)', () => check('/api/events', pageSchema(EventViewSchema)));
   it('/api/sessions (array)', () => check('/api/sessions', z.array(SessionViewSchema)));
+  it('/api/projects (array)', () => check('/api/projects', z.array(ProjectViewSchema)));
+  it('?project=bogus / ../etc -> default project data (switch-by-id, no path injection)', async () => {
+    const def = await (await fetch(base + '/api/work')).json();
+    const bogus = await (await fetch(base + '/api/work?project=bogus')).json();
+    const trav = await (await fetch(base + '/api/work?project=../etc/passwd')).json();
+    expect(bogus.ok).toBe(true); expect(trav.ok).toBe(true);
+    expect(bogus.data.items.map((w: any) => w.id)).toEqual(def.data.items.map((w: any) => w.id));
+    expect(trav.data.items.map((w: any) => w.id)).toEqual(def.data.items.map((w: any) => w.id));
+  });
 });

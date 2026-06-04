@@ -51,6 +51,13 @@ export const EventViewSchema = z.object({
   created_at: z.string(),
 }).strict();
 
+export const ProjectViewSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  path: z.string(),
+  current: z.boolean(),
+}).strict();
+
 export const SessionViewSchema = z.object({
   id: z.string(),
   agent: z.string(),

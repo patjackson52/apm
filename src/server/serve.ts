@@ -1,5 +1,6 @@
 import http from 'node:http';
 import path from 'node:path';
+import os from 'node:os';
 import type { Clock } from '../domain/clock.js';
 import { systemClock } from '../domain/clock.js';
 import { SqliteStorage } from '../storage/sqlite.js';
@@ -8,6 +9,7 @@ import { ApmError } from '../domain/errors.js';
 import { ok, fail, buildMeta } from '../format/envelope.js';
 import { matchRoute, type Route } from './router.js';
 import { serveFile } from './files.js';
+import { loadRegistry, ensureRegistered, resolveProjectDir, listProjects } from './registry.js';
 import { httpStatusFor } from './httpError.js';
 import * as enrich from './enrich.js';
 import * as work from '../usecases/work.js';
@@ -67,6 +69,7 @@ export interface ServeOptions { dir: string; clock?: Clock; port?: number; }
 
 /** Build the node:http request listener (read-only, single project at `dir`). */
 export function createListener(dir: string, clock: Clock): http.RequestListener {
+  const registry = ensureRegistered(loadRegistry(process.env.APM_HOME ?? os.homedir()), path.dirname(path.dirname(findProjectDb(dir))));
   return (req, res) => {
     const cmd = `${req.method ?? 'GET'} ${req.url ?? '/'}`;
     const failOut = (code: 'E_NOT_FOUND' | 'E_VALIDATION' | 'E_INTERNAL', msg: string) =>
@@ -80,6 +83,15 @@ export function createListener(dir: string, clock: Clock): http.RequestListener 
     if (req.method === 'OPTIONS') { writeJson(res, 405, fail(new ApmError('E_VALIDATION', 'method not allowed'), buildMeta(cmd, clock))); return; }
 
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+    const projectDir = resolveProjectDir(registry, url.searchParams.get('project'), dir);
+
+    // Project registry list (needs the per-listener registry + dir, so handled here).
+    if (url.pathname === '/api/projects') {
+      if (req.method !== 'GET') { writeJson(res, 405, fail(new ApmError('E_VALIDATION', 'method not allowed'), buildMeta(cmd, clock))); return; }
+      const currentRoot = path.dirname(path.dirname(findProjectDb(projectDir)));
+      writeJson(res, 200, ok(listProjects(registry, currentRoot), buildMeta(cmd, clock))); return;
+    }
+
     const m = matchRoute(ROUTES, req.method ?? 'GET', url.pathname);
     if ('status' in m) {
       if (m.status === 404) return failOut('E_NOT_FOUND', `no route ${url.pathname}`);
@@ -88,7 +100,7 @@ export function createListener(dir: string, clock: Clock): http.RequestListener 
 
     if (m.route.raw) {
       try {
-        const projectRoot = path.dirname(path.dirname(findProjectDb(dir)));
+        const projectRoot = path.dirname(path.dirname(findProjectDb(projectDir)));
         m.route.raw({ projectRoot, query: url.searchParams }, res);
       } catch (e) {
         const apm = e instanceof ApmError ? e : new ApmError('E_INTERNAL', String((e as Error)?.message ?? e));
@@ -98,7 +110,7 @@ export function createListener(dir: string, clock: Clock): http.RequestListener 
     }
     let storage: SqliteStorage | undefined;
     try {
-      storage = new SqliteStorage(findProjectDb(dir), clock);
+      storage = new SqliteStorage(findProjectDb(projectDir), clock);
       const ctx: Ctx = { storage, clock };
       const data = m.route.run!({ ctx, params: m.params, query: url.searchParams });
       writeJson(res, 200, ok(data, buildMeta(cmd, clock)));
