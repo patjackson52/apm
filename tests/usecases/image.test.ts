@@ -102,6 +102,21 @@ describe('image.add', () => {
   });
 });
 
+import { addImageTx } from '../../src/usecases/image.js';
+
+describe('addImageTx (in-transaction)', () => {
+  it('inserts + links an image within a caller-provided transaction', () => {
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'TX', agent: 'agent:claude' });
+    const meta = putBlob(dir, PNG);
+    const v = storage.transaction('immediate', (tx) =>
+      addImageTx(tx, { workItem: wi.id, kind: 'screenshot', alt: 'x', relation: 'evidence', agent: 'agent:claude', blob: meta }),
+    );
+    expect(v.id).toMatch(/^IMG-/);
+    expect(v.work_item).toBe(wi.id);
+  });
+});
+
 describe('image.show/revise/find/pair', () => {
   it('shows by id, revises into a new version, finds by blob, pairs two images', () => {
     const ctx = { storage, clock };
@@ -126,5 +141,19 @@ describe('image.show/revise/find/pair', () => {
       const ev: any = tx.get("SELECT payload_json FROM events WHERE event_type='image.paired' ORDER BY id DESC LIMIT 1");
       expect(JSON.parse(ev.payload_json)).toMatchObject({ a: a.id, b: b.id, kind: 'before-after' });
     });
+  });
+});
+
+describe('bug capture (--blocker)', () => {
+  it('links a bug screenshot to a blocker, discoverable via imagesByBlocker', () => {
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'B', agent: 'agent:claude' });
+    const blkId = storage.transaction('immediate', (tx) =>
+      repos(tx).blockers.insert({ workItemId: wi.id, type: 'bug', reason: 'broken' }),
+    );
+    const v = image.add(ctx, { workItem: wi.id, kind: 'bug', alt: 'broken', blocker: blkId, agent: 'agent:claude', blob: putBlob(dir, PNG) });
+    expect(v.kind).toBe('bug');
+    const found = storage.transaction('deferred', (tx) => repos(tx).artifacts.imagesByBlocker(blkId));
+    expect(found.map((row: any) => row.id)).toContain(v.id);
   });
 });

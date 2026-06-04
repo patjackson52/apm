@@ -208,6 +208,8 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
       }
     }
 
+    const requiredCaptures = stepDef.requires?.captures ?? [];
+
     const sessionForContract = session ?? '<session>';
     const contract = buildContract(stepDef, requiredContext, { workItem: workItemId, run: runRow.id, session: sessionForContract });
 
@@ -256,6 +258,7 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
       prompt_id: stepDef.prompt_id ?? null,
       allowed_action: contract.allowed_action,
       required_context: requiredContext,
+      required_captures: requiredCaptures,
       do_not: contract.do_not,
       when_done: contract.when_done,
       next_actions: contract.next_actions,

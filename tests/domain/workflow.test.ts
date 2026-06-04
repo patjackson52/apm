@@ -72,3 +72,54 @@ steps:
     expect(stepById(def, 'design')?.type).toBe('agent_prompt');
   });
 });
+
+const WITH_CAPTURES = `
+id: cap
+version: 1
+name: cap
+applies_to: [feature]
+status: active
+steps:
+  - id: shoot
+    type: agent_execution
+    requires:
+      captures:
+        - name: login-dark
+          kind: screenshot
+          route: /login
+          viewport: { w: 1280, h: 800 }
+          prompt: capture-login
+    outputs:
+      - artifact_type: review
+    next: [done]
+  - id: done
+    type: terminal
+`;
+
+describe('capture specs in workflow', () => {
+  it('parses + validates a step with requires.captures', () => {
+    const def = parseWorkflow(WITH_CAPTURES);
+    expect(() => validateWorkflow(def)).not.toThrow();
+    expect(def.steps[0].requires?.captures?.[0]).toMatchObject({ name: 'login-dark', kind: 'screenshot', route: '/login' });
+  });
+
+  it('rejects a capture missing name or kind', () => {
+    const bad = parseWorkflow(`
+id: b
+version: 1
+name: b
+applies_to: [feature]
+status: active
+steps:
+  - id: s
+    type: agent_execution
+    requires:
+      captures:
+        - route: /x
+    next: [t]
+  - id: t
+    type: terminal
+`);
+    expect(() => validateWorkflow(bad)).toThrow(/capture needs name and kind/);
+  });
+});

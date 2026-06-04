@@ -3,6 +3,7 @@ import { ApmError } from '../domain/errors.js';
 import { repos } from '../storage/repos.js';
 import { toImageView, type ImageView, type Page } from '../domain/entities.js';
 import type { BlobMeta } from '../storage/blobstore.js';
+import type { Tx } from '../storage/storage.js';
 
 /** Hard ceiling on a single image (P4). 25 MiB. */
 export const MAX_BLOB_BYTES = 25 * 1024 * 1024;
@@ -16,51 +17,56 @@ export interface AddArgs {
   alt?: string;
   capture?: Record<string, unknown>;
   relation?: string;
+  blocker?: string;
   agent: string;
   blob: BlobMeta;
 }
 
-export function add(ctx: Ctx, a: AddArgs): ImageView {
+/** Insert + link an image inside a caller-provided transaction. Validates kind/relation/size. */
+export function addImageTx(tx: Tx, a: AddArgs): ImageView {
   if (!IMAGE_KINDS.includes(a.kind as any)) {
     throw new ApmError('E_VALIDATION', `invalid kind`, [{ field: 'kind', problem: `must be one of ${IMAGE_KINDS.join('|')}`, got: a.kind }]);
   }
-  const relation = a.relation ?? 'evidence';
+  const relation = a.relation ?? (a.blocker ? 'bug' : 'evidence');
   if (!RELATIONS.includes(relation as any)) {
     throw new ApmError('E_VALIDATION', `invalid relation`, [{ field: 'relation', problem: `must be one of ${RELATIONS.join('|')}`, got: relation }]);
   }
   if (a.blob.byte_size > MAX_BLOB_BYTES) {
     throw new ApmError('E_VALIDATION', `image too large (${a.blob.byte_size} bytes > ${MAX_BLOB_BYTES})`);
   }
-  return ctx.storage.transaction('immediate', (tx) => {
-    const r = repos(tx);
-    r.agents.ensure(a.agent);
-    if (!r.workItems.byId(a.workItem)) throw new ApmError('E_NOT_FOUND', `work item ${a.workItem} not found`);
-    r.blobs.insert(a.blob);
-    const metadata = {
-      kind: a.kind,
-      blob: a.blob.sha256,
-      mime: a.blob.mime,
-      ext: a.blob.ext,
-      width: a.blob.width,
-      height: a.blob.height,
-      byte_size: a.blob.byte_size,
-      alt: a.alt ?? null,
-      capture: a.capture ?? null,
-    };
-    const id = r.artifacts.insert(
-      { type: 'image', title: a.alt ?? a.kind, body: a.alt ?? null, createdBy: a.agent, version: 1, metadata },
-      'image.created',
-    );
-    r.artifacts.linkToWorkItem(a.workItem, id, relation);
-    tx.appendEvent({
-      actorId: a.agent,
-      eventType: 'image.linked',
-      entityType: 'artifact',
-      entityId: id,
-      payload: { work_item: a.workItem, relation },
-    });
-    return toImageView(r.artifacts.byId(id)!, a.workItem);
+  const r = repos(tx);
+  r.agents.ensure(a.agent);
+  if (!r.workItems.byId(a.workItem)) throw new ApmError('E_NOT_FOUND', `work item ${a.workItem} not found`);
+  r.blobs.insert(a.blob);
+  const metadata = {
+    kind: a.kind,
+    blob: a.blob.sha256,
+    mime: a.blob.mime,
+    ext: a.blob.ext,
+    width: a.blob.width,
+    height: a.blob.height,
+    byte_size: a.blob.byte_size,
+    alt: a.alt ?? null,
+    capture: a.capture ?? null,
+    blocker: a.blocker ?? null,
+  };
+  const id = r.artifacts.insert(
+    { type: 'image', title: a.alt ?? a.kind, body: a.alt ?? null, createdBy: a.agent, version: 1, metadata },
+    'image.created',
+  );
+  r.artifacts.linkToWorkItem(a.workItem, id, relation);
+  tx.appendEvent({
+    actorId: a.agent,
+    eventType: 'image.linked',
+    entityType: 'artifact',
+    entityId: id,
+    payload: { work_item: a.workItem, relation, ...(a.blocker ? { blocker: a.blocker } : {}) },
   });
+  return toImageView(r.artifacts.byId(id)!, a.workItem);
+}
+
+export function add(ctx: Ctx, a: AddArgs): ImageView {
+  return ctx.storage.transaction('immediate', (tx) => addImageTx(tx, a));
 }
 
 export interface ListArgs { workItem: string; limit?: number; offset?: number }
@@ -109,6 +115,7 @@ export function revise(ctx: Ctx, id: string, a: ReviseArgs): ImageView {
       width: a.blob.width, height: a.blob.height, byte_size: a.blob.byte_size,
       alt: a.alt ?? prev.alt ?? null,
       capture: a.capture ?? prev.capture ?? null,
+      blocker: prev.blocker ?? null,
     };
     const newId = r.artifacts.insert(
       { type: 'image', title: metadata.alt ?? metadata.kind, body: metadata.alt ?? null, createdBy: a.agent, version: old.version + 1, rootId: old.root_artifact_id, supersedes: old.id, metadata },

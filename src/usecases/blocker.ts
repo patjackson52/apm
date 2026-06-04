@@ -2,7 +2,7 @@ import type { Ctx } from '../cli/run.js';
 import { ApmError } from '../domain/errors.js';
 import { repos } from '../storage/repos.js';
 import { reopenReviewer } from '../domain/advance.js';
-import { toBlockerView, type BlockerView } from '../domain/entities.js';
+import { toBlockerView, toImageView, type BlockerView, type ImageView } from '../domain/entities.js';
 
 export interface CreateBlockerArgs {
   workItem: string;
@@ -94,10 +94,12 @@ export function list(ctx: Ctx, workItem?: string | null): BlockerView[] {
   });
 }
 
-export function show(ctx: Ctx, id: string): BlockerView {
+export function show(ctx: Ctx, id: string): BlockerView & { images: ImageView[] } {
   return ctx.storage.transaction('deferred', (tx) => {
-    const row = repos(tx).blockers.byId(id);
+    const r = repos(tx);
+    const row = r.blockers.byId(id);
     if (!row) throw new ApmError('E_NOT_FOUND', `blocker ${id} not found`);
-    return toBlockerView(row);
+    const images = r.artifacts.imagesByBlocker(id).map((ir: any) => toImageView(ir, row.work_item_id));
+    return { ...toBlockerView(row), images };
   });
 }

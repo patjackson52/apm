@@ -297,16 +297,30 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .option('--artifact <id>', 'artifact id')
     .option('--artifact-type <t>', 'artifact type (creates artifact from --body-file)')
     .option('--body-file <f>', 'path to artifact body file')
-    .action(function (this: Command, runId: string, stepId: string, o: { agent: string; artifact?: string; artifactType?: string; bodyFile?: string }) {
+    .option('--image-file <path>', 'attach an evidence screenshot (creates IMG + embeds in output doc)')
+    .option('--image-kind <k>', 'image kind', 'screenshot')
+    .option('--image-alt <s>', 'image alt text')
+    .action(function (this: Command, runId: string, stepId: string, o: { agent: string; artifact?: string; artifactType?: string; bodyFile?: string; imageFile?: string; imageKind: string; imageAlt?: string }) {
+      const deps = buildDeps();
       const bodyContent = o.bodyFile ? readFileSync(o.bodyFile, 'utf8') : undefined;
-      process.exitCode = runCommand(buildDeps(), 'step complete', (ctx) => ({
-        data: step.complete(ctx, {
-          run: runId, step: stepId, agent: o.agent,
-          artifactId: o.artifact ?? null,
-          artifactType: o.artifactType ?? null,
-          bodyFile: bodyContent ?? null,
-        }),
-      }));
+      process.exitCode = runCommand(deps, 'step complete', (ctx) => {
+        let imageBlob = null;
+        if (o.imageFile) {
+          const root = resolveProjectRoot(deps.dir);
+          imageBlob = putBlob(root, readFileSync(o.imageFile));
+        }
+        return {
+          data: step.complete(ctx, {
+            run: runId, step: stepId, agent: o.agent,
+            artifactId: o.artifact ?? null,
+            artifactType: o.artifactType ?? null,
+            bodyFile: bodyContent ?? null,
+            imageBlob,
+            imageKind: o.imageKind ?? null,
+            imageAlt: o.imageAlt ?? null,
+          }),
+        };
+      });
     });
 
   stepCmd
@@ -524,6 +538,13 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
       process.exitCode = runCommand(buildDeps(), 'blocker create', (ctx) => ({
         data: blocker.create(ctx, { workItem, type: o.type, reason: o.reason, agent: o.agent }),
       }));
+    });
+
+  blockerCmd
+    .command('show <id>')
+    .description('Show a blocker (incl. linked bug images)')
+    .action(function (this: Command, id: string) {
+      process.exitCode = runCommand(buildDeps(), 'blocker show', (ctx) => ({ data: blocker.show(ctx, id) }));
     });
 
   blockerCmd
@@ -766,15 +787,16 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .option('--kind <k>', 'screenshot|mockup|diagram|reference|bug', 'screenshot')
     .option('--alt <s>', 'alt / caption text')
     .option('--capture-file <f>', 'path to a JSON file of capture metadata')
-    .option('--relation <r>', 'evidence|reference|bug|produced', 'evidence')
+    .option('--relation <r>', 'evidence|reference|bug|produced')
+    .option('--blocker <id>', 'attach as bug evidence to a blocker')
     .requiredOption('--agent <name>', 'agent name')
-    .action(function (this: Command, o: { workItem: string; file: string; kind: string; alt?: string; captureFile?: string; relation: string; agent: string }) {
+    .action(function (this: Command, o: { workItem: string; file: string; kind: string; alt?: string; captureFile?: string; relation?: string; blocker?: string; agent: string }) {
       const deps = buildDeps();
       process.exitCode = runCommand(deps, 'image add', (ctx) => {
         const root = resolveProjectRoot(deps.dir);
         const blob = putBlob(root, readFileSync(o.file)); // IO before the txn (C3)
         const capture = o.captureFile ? JSON.parse(readFileSync(o.captureFile, 'utf8')) : undefined;
-        return { data: image.add(ctx, { workItem: o.workItem, kind: o.kind, alt: o.alt, capture, relation: o.relation, agent: o.agent, blob }) };
+        return { data: image.add(ctx, { workItem: o.workItem, kind: o.kind, alt: o.alt, capture, relation: o.relation, blocker: o.blocker, agent: o.agent, blob }) };
       });
     });
 

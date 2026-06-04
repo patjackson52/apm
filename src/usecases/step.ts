@@ -6,6 +6,8 @@ import { completeMainStep } from '../domain/advance.js';
 import { cascadeActivateDependents } from './workflow.js';
 import { toRunView, toStepRunView, type RunView, type StepRunView } from '../domain/entities.js';
 import { REVIEW_VERDICTS, type ReviewVerdict } from '../domain/types.js';
+import { addImageTx } from './image.js';
+import type { BlobMeta } from '../storage/blobstore.js';
 
 /** review_gate self-heal: max times the on_reject (source) step is re-opened before falling back to a human block. */
 const MAX_REVISE_ROUNDS = 3;
@@ -17,6 +19,9 @@ export interface CompleteArgs {
   artifactId?: string | null;
   artifactType?: string | null;
   bodyFile?: string | null;
+  imageBlob?: BlobMeta | null;
+  imageKind?: string | null;
+  imageAlt?: string | null;
 }
 
 export function complete(ctx: Ctx, a: CompleteArgs): RunView {
@@ -55,6 +60,27 @@ export function complete(ctx: Ctx, a: CompleteArgs): RunView {
       });
       r.artifacts.linkToWorkItem(runRow.work_item_id, artId, 'produced');
       resolvedArtifactId = artId;
+    }
+
+    // Evidence screenshot: ingest the image, link it as evidence, wrap it in an output doc.
+    if (a.imageBlob) {
+      const img = addImageTx(tx, {
+        workItem: runRow.work_item_id,
+        kind: a.imageKind ?? 'screenshot',
+        alt: a.imageAlt ?? undefined,
+        relation: 'evidence',
+        agent: a.agent,
+        blob: a.imageBlob,
+      });
+      const evidenceId = r.artifacts.insert({
+        type: 'review',
+        title: `${a.step} evidence`,
+        body: `![${img.alt ?? img.id}](apm:${img.id})`,
+        createdBy: a.agent,
+        version: 1,
+      });
+      r.artifacts.linkToWorkItem(runRow.work_item_id, evidenceId, 'produced');
+      resolvedArtifactId = evidenceId;
     }
 
     completeMainStep(tx, def, runRow, mainStep, { artifactId: resolvedArtifactId }, a.agent);
