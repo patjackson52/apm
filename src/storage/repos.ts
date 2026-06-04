@@ -7,8 +7,9 @@ export interface NewWorkItem {
 }
 
 export interface NewArtifact {
-  type: ArtifactType; title: string; body: string; createdBy: string;
+  type: ArtifactType; title: string; body: string | null; createdBy: string;
   version: number; rootId?: string; supersedes?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface NewDecision {
@@ -173,15 +174,23 @@ export function repos(tx: Tx) {
       },
     },
     artifacts: {
-      insert(a: NewArtifact): string {
-        const id = tx.allocateId('ART');
+      insert(a: NewArtifact, eventType: string = 'artifact.created'): string {
+        const id = tx.allocateId(a.type === 'image' ? 'IMG' : 'ART');
         // If no rootId provided (v1 artifact), root = own id
         const rootId = a.rootId ?? id;
         tx.run(
-          "INSERT INTO artifacts (id, type, title, version, status, body, root_artifact_id, created_by, created_at, supersedes_artifact_id) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)",
-          id, a.type, a.title, a.version, a.body, rootId, a.createdBy, now, a.supersedes ?? null,
+          "INSERT INTO artifacts (id, type, title, version, status, body, metadata_json, root_artifact_id, created_by, created_at, supersedes_artifact_id) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)",
+          id, a.type, a.title, a.version, a.body,
+          a.metadata != null ? JSON.stringify(a.metadata) : null,
+          rootId, a.createdBy, now, a.supersedes ?? null,
         );
-        tx.appendEvent({ actorId: a.createdBy, eventType: 'artifact.created', entityType: 'artifact', entityId: id, payload: { type: a.type, version: a.version } });
+        tx.appendEvent({
+          actorId: a.createdBy,
+          eventType,
+          entityType: 'artifact',
+          entityId: id,
+          payload: { type: a.type, version: a.version },
+        });
         return id;
       },
       byId(id: string): any | undefined {

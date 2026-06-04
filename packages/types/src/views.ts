@@ -95,6 +95,7 @@ export const ArtifactViewSchema = z.object({
   created_at: z.string(),
   body: z.string().nullable(),
   work_item: z.string().nullable(),
+  metadata: z.record(z.unknown()).nullable(),
 }).strict();
 
 export const DecisionViewSchema = z.object({

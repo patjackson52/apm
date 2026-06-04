@@ -12,7 +12,7 @@ export const ESTIMATES = ['XS', 'S', 'M', 'L', 'XL'] as const;
 export type Estimate = (typeof ESTIMATES)[number];
 
 export const ARTIFACT_TYPES = [
-  'spec', 'adr', 'decision', 'design', 'plan', 'review', 'handoff', 'work_log', 'status_report',
+  'spec', 'adr', 'decision', 'design', 'plan', 'review', 'handoff', 'work_log', 'status_report', 'image',
 ] as const;
 export type ArtifactType = (typeof ARTIFACT_TYPES)[number];
 
