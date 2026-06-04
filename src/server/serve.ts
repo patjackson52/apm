@@ -19,6 +19,7 @@ import * as decision from '../usecases/decision.js';
 import * as adr from '../usecases/adr.js';
 import * as blocker from '../usecases/blocker.js';
 import * as gate from '../usecases/gate.js';
+import * as events from '../usecases/events.js';
 
 const num = (q: URLSearchParams, k: string): number | undefined => {
   const v = q.get(k); return v == null ? undefined : parseInt(v, 10);
@@ -28,6 +29,7 @@ const str = (q: URLSearchParams, k: string): string | undefined => q.get(k) ?? u
 /** Read-only GET route table — thin adapters over existing usecases. */
 export const ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/status', run: ({ ctx }) => enrich.enrichedStatus(ctx) },
+  { method: 'GET', pattern: '/api/events', run: ({ ctx, query }) => events.list(ctx, { entityType: str(query, 'entity-type'), entityId: str(query, 'entity-id'), limit: num(query, 'limit'), offset: num(query, 'offset') }) },
   { method: 'GET', pattern: '/api/leases', run: ({ ctx, query }) => enrich.listEnrichedLeases(ctx, { workItem: str(query, 'work-item'), agent: str(query, 'agent') }) },
   { method: 'GET', pattern: '/api/work', run: ({ ctx, query }) => work.list(ctx, { status: str(query, 'status'), type: str(query, 'type'), limit: num(query, 'limit'), offset: num(query, 'offset') }) },
   { method: 'GET', pattern: '/api/work/:id', run: ({ ctx, params }) => work.show(ctx, params.id) },

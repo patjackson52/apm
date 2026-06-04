@@ -41,6 +41,16 @@ export const RunViewSchema = z.object({
   completed_at: z.string().nullable(),
 }).strict();
 
+export const EventViewSchema = z.object({
+  id: z.string(),
+  actor: z.string().nullable(),
+  event_type: z.string(),
+  entity_type: z.string(),
+  entity_id: z.string(),
+  payload: z.unknown(),
+  created_at: z.string(),
+}).strict();
+
 export const StepRunViewSchema = z.object({
   id: z.string(),
   run_id: z.string(),
