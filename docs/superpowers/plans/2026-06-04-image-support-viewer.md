@@ -251,8 +251,9 @@ Expected: FAIL — `serveBlob` not exported.
 **First, make raw handlers receive `params`** (they currently get only `{ projectRoot, query }`, so `/api/blob/:sha` would never see its sha). In `src/server/router.ts`, update the `RawRun` type to include `params`:
 
 ```typescript
-export type RawRun = (rc: { projectRoot: string; params: Record<string, string>; query: URLSearchParams }, res: http.ServerResponse) => void;
+export type RawRun = (rc: { projectRoot: string; params: Record<string, string>; query: URLSearchParams }, res: import('node:http').ServerResponse) => void;
 ```
+> Use the inline `import('node:http').ServerResponse` form — `router.ts` has no `http` namespace import, so bare `http.ServerResponse` would be `TS2304`. Match the existing inline style in that file.
 
 In `src/server/serve.ts`, the raw-dispatch call site (currently `m.route.raw({ projectRoot, query: url.searchParams }, res)`) — add `params` (the matched params `m.params` are already computed by `matchRoute`):
 
@@ -294,7 +295,7 @@ export function serveBlob(
 }
 ```
 
-In `src/server/serve.ts`, add to the `ROUTES` array (import `serveBlob`, `image`):
+In `src/server/serve.ts`, add the imports — `serveBlob` to the existing `./files.js` import (currently `import { serveFile } from './files.js';` → `import { serveFile, serveBlob } from './files.js';`) and a new `import * as image from '../usecases/image.js';` (alongside the other `../usecases/*` imports) — then add to the `ROUTES` array:
 
 ```typescript
   { method: 'GET', pattern: '/api/blob/:sha', raw: (rc, res) => serveBlob(rc.projectRoot, rc.params.sha, res, SECURITY_HEADERS) },
