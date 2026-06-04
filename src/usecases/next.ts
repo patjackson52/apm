@@ -6,6 +6,7 @@ import { stepById } from '../domain/workflow.js';
 import type { Tx } from '../storage/storage.js';
 import { resolveCurrent } from './session.js';
 import { parseTtlSeconds } from './lease.js';
+import { globalFleetPolicy } from '../domain/policy.js';
 
 export interface NextArgs {
   agent: string;
@@ -221,6 +222,16 @@ const idle = (reason: string, retryAfter: number, session?: string): NextResult 
   status: 'idle', reason, data: { status: 'idle', reason, retry_after: retryAfter }, session,
 });
 
+/**
+ * Number of concurrent dispatch slots the fleet allows. Read in a deferred tx
+ * from the GLOBAL effective policy: when parallel_work_enabled is false the
+ * fleet is forced to a single slot, otherwise max_parallel_agents (default 4).
+ */
+function effectiveSlotCount(ctx: Ctx): number {
+  const pol = ctx.storage.transaction('deferred', (tx) => globalFleetPolicy(tx));
+  return pol.parallel_work_enabled === false ? 1 : (pol.max_parallel_agents ?? 4);
+}
+
 export function next(ctx: Ctx, args: NextArgs): NextResult {
   // Resolve session outside any read/walk tx (start() uses its own immediate txn).
   let session: string | undefined;
@@ -262,10 +273,55 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
     });
   }
 
+  // FLEET GOVERNOR (Spec B) — a runner must hold a `slot` resource lease to
+  // dispatch. Only gate when acquiring AND PHASE 1 found dispatchable work (no
+  // point taking a slot when drained/idle). If no slot is free, return idle
+  // WITHOUT having acquired a work-item lease. A slot held here may be briefly
+  // wasted if the work-item walk below finds everything taken — that is
+  // acceptable (it expires / gets reused; the runner owns slot release).
+  const secs = parseTtlSeconds(args.ttl ?? '30m');
+  const slots = effectiveSlotCount(ctx);
+  const slotOk = ctx.storage.transaction('immediate', (tx) => {
+    const now = tx.now();
+    // Reuse a slot this agent already holds (idempotent across repeated next calls).
+    const mine = tx.get(
+      "SELECT id FROM leases WHERE resource_type='slot' AND agent_id=? AND status='active' AND expires_at > ?",
+      args.agent, now,
+    );
+    if (mine) return true;
+    for (let i = 1; i <= slots; i++) {
+      const key = `slot-${i}`;
+      // Lazy-heal a stale holder of this slot.
+      tx.run(
+        "UPDATE leases SET status='expired' WHERE resource_type='slot' AND resource_key=? AND status='active' AND expires_at <= ?",
+        key, now,
+      );
+      const taken = tx.get(
+        "SELECT 1 FROM leases WHERE resource_type='slot' AND resource_key=? AND status='active' AND expires_at > ?",
+        key, now,
+      );
+      if (taken) continue;
+      try {
+        const id = tx.allocateId('LEASE');
+        repos(tx).agents.ensure(args.agent);
+        tx.run(
+          "INSERT INTO leases (id, resource_type, resource_key, work_item_id, agent_id, session_id, status, acquired_at, expires_at, heartbeat_at) VALUES (?, 'slot', ?, NULL, ?, NULL, 'active', ?, ?, ?)",
+          id, key, args.agent, now, addSeconds(now, secs), now,
+        );
+        tx.appendEvent({ actorId: args.agent, eventType: 'lease.acquired', entityType: 'lease', entityId: id, payload: { slot: key } });
+        return true;
+      } catch (e: any) {
+        if (isUnique(e)) continue; // another runner grabbed this slot since the check
+        throw e;
+      }
+    }
+    return false;
+  });
+  if (!slotOk) return idle('all_leased', jitter(args.agent), session);
+
   // PHASE 2 — acquire-walk. Each acquire attempt is its own short IMMEDIATE tx.
   // Walk the ranked list until one INSERT succeeds; advance past items taken
   // since the peek (UNIQUE), and bail to idle on a busy database.
-  const secs = parseTtlSeconds(args.ttl ?? '30m');
 
   for (const workItemId of workItemIds) {
     try {

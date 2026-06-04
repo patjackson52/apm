@@ -24,4 +24,8 @@ export const DEFAULT_POLICY = {
   // rec #4: when a work item completes, auto-activate dependents whose deps are all done.
   // OFF by default — opt in at global or milestone-subtree scope to let the loop self-advance.
   auto_activate_dependents: false,
+  // Fleet governor (Spec B): parallel dispatch is ON by default with a 4-slot cap.
+  // Set parallel_work_enabled:false to force a single concurrent dispatch.
+  parallel_work_enabled: true,
+  max_parallel_agents: 4,
 };
