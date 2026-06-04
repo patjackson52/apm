@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { selectCandidate, type Candidate, type Caller } from '../../src/domain/resolver.js';
+import { selectCandidate, selectCandidates, type Candidate, type Caller } from '../../src/domain/resolver.js';
 
 const NOW = '2026-06-02T12:00:00.000Z';
 function cand(p: Partial<Candidate>): Candidate {
@@ -53,5 +53,38 @@ describe('selectCandidate', () => {
       cand({ workItemId: 'WI-2', priority: 5 }),
     ], caller, NOW);
     expect(r).toMatchObject({ status: 'dispatched', workItemId: 'WI-2' });
+  });
+});
+
+const base = (over: Partial<Candidate>): Candidate => ({
+  workItemId: 'WI-1', priority: 0, createdAt: '2026-06-03T00:00:00Z',
+  depsAllComplete: true, hasPendingStep: true, blockedByHumanGate: false,
+  requiredCaps: [], leaseHolderAgent: null, leaseLive: false, ...over,
+});
+const callerA: Caller = { agent: 'a', capabilities: [], match: 'any' };
+
+describe('selectCandidates (ranked list)', () => {
+  it('returns dispatchable items in priority then created/id order', () => {
+    const r = selectCandidates([
+      base({ workItemId: 'WI-2', priority: 1 }),
+      base({ workItemId: 'WI-1', priority: 5 }),
+      base({ workItemId: 'WI-3', priority: 5 }),
+    ], callerA, '2026-06-03T01:00:00Z');
+    expect(r.status).toBe('dispatchable');
+    if (r.status === 'dispatchable') expect(r.workItemIds).toEqual(['WI-1', 'WI-3', 'WI-2']);
+  });
+
+  it('excludes items leased by another agent but keeps others', () => {
+    const r = selectCandidates([
+      base({ workItemId: 'WI-1', leaseLive: true, leaseHolderAgent: 'other' }),
+      base({ workItemId: 'WI-2' }),
+    ], callerA, '2026-06-03T01:00:00Z');
+    expect(r.status).toBe('dispatchable');
+    if (r.status === 'dispatchable') expect(r.workItemIds).toEqual(['WI-2']);
+  });
+
+  it('reports deps_pending idle reason when nothing dispatchable', () => {
+    const r = selectCandidates([base({ depsAllComplete: false })], callerA, 'x');
+    expect(r).toEqual({ status: 'idle', reason: 'deps_pending', retryAfter: 30 });
   });
 });

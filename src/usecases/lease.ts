@@ -17,34 +17,47 @@ function addSeconds(iso: string, secs: number): string {
 
 export interface AcquireArgs { workItem: string; agent: string; session?: string; ttl: string; }
 
-export function acquire(ctx: Ctx, a: AcquireArgs): LeaseView {
+export interface AcquireResourceArgs {
+  resourceType: 'work_item' | 'slot' | 'integration';
+  resourceKey: string;
+  workItem?: string | null;
+  agent: string;
+  session?: string;
+  ttl: string;
+}
+
+export function acquireResource(ctx: Ctx, a: AcquireResourceArgs): LeaseView {
   const secs = parseTtlSeconds(a.ttl);
   return ctx.storage.transaction('immediate', (tx) => {
     const r = repos(tx);
-    if (!r.workItems.byId(a.workItem)) throw new ApmError('E_NOT_FOUND', `${a.workItem} not found`);
+    if (a.workItem && !r.workItems.byId(a.workItem)) throw new ApmError('E_NOT_FOUND', `${a.workItem} not found`);
     r.agents.ensure(a.agent);
-    // lazy-heal expired active leases on this item
-    tx.run("UPDATE leases SET status='expired' WHERE work_item_id=? AND status='active' AND expires_at <= ?", a.workItem, tx.now());
+    // lazy-heal expired active leases on THIS resource only
+    tx.run("UPDATE leases SET status='expired' WHERE resource_type=? AND resource_key=? AND status='active' AND expires_at <= ?",
+      a.resourceType, a.resourceKey, tx.now());
     const id = tx.allocateId('LEASE');
     try {
       tx.run(
-        "INSERT INTO leases (id, work_item_id, agent_id, session_id, status, acquired_at, expires_at, heartbeat_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?)",
-        id, a.workItem, a.agent, a.session ?? null, tx.now(), addSeconds(tx.now(), secs), tx.now(),
+        "INSERT INTO leases (id, resource_type, resource_key, work_item_id, agent_id, session_id, status, acquired_at, expires_at, heartbeat_at) VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)",
+        id, a.resourceType, a.resourceKey, a.workItem ?? null, a.agent, a.session ?? null, tx.now(), addSeconds(tx.now(), secs), tx.now(),
       );
     } catch (e: any) {
-      // better-sqlite3 throws SqliteError with code SQLITE_CONSTRAINT_UNIQUE for partial-unique index violations
       if (
         (e instanceof Database.SqliteError && /UNIQUE/i.test(e.message)) ||
         e.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
         /UNIQUE/i.test(String(e.message))
       ) {
-        throw new ApmError('E_LEASE_CONFLICT', `${a.workItem} is already leased`);
+        throw new ApmError('E_LEASE_CONFLICT', `${a.resourceType}:${a.resourceKey} is already leased`);
       }
       throw e;
     }
-    tx.appendEvent({ actorId: a.agent, eventType: 'lease.acquired', entityType: 'lease', entityId: id, payload: { work_item: a.workItem } });
+    tx.appendEvent({ actorId: a.agent, eventType: 'lease.acquired', entityType: 'lease', entityId: id, payload: { resource_type: a.resourceType, resource_key: a.resourceKey, work_item: a.workItem ?? null } });
     return toLeaseView(tx.get('SELECT * FROM leases WHERE id=?', id));
   });
+}
+
+export function acquire(ctx: Ctx, a: AcquireArgs): LeaseView {
+  return acquireResource(ctx, { resourceType: 'work_item', resourceKey: a.workItem, workItem: a.workItem, agent: a.agent, session: a.session, ttl: a.ttl });
 }
 
 export function heartbeat(ctx: Ctx, leaseId: string, ttl: string): LeaseView {

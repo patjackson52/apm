@@ -4,6 +4,7 @@ import type { WorkItemType, Estimate, ArtifactType } from '../domain/types.js';
 export interface NewWorkItem {
   type: WorkItemType; title: string; description: string | null;
   priority: number; estimate: Estimate | null; parentId: string | null; createdBy: string | null;
+  dedupKey: string | null;
 }
 
 export interface NewArtifact {
@@ -44,9 +45,9 @@ export function repos(tx: Tx) {
       insert(w: NewWorkItem): string {
         const id = tx.allocateId('WI');
         tx.run(
-          `INSERT INTO work_items (id, type, title, description, status, priority, estimate, parent_id, created_by, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)`,
-          id, w.type, w.title, w.description, w.priority, w.estimate, w.parentId, w.createdBy, now, now,
+          `INSERT INTO work_items (id, type, title, description, status, priority, estimate, parent_id, created_by, created_at, updated_at, dedup_key)
+           VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?)`,
+          id, w.type, w.title, w.description, w.priority, w.estimate, w.parentId, w.createdBy, now, now, w.dedupKey,
         );
         tx.appendEvent({ actorId: w.createdBy, eventType: 'work_item.created', entityType: 'work_item', entityId: id, payload: { type: w.type, title: w.title } });
         return id;
@@ -80,6 +81,38 @@ export function repos(tx: Tx) {
         return tx.all<{ source_work_item_id: string }>(
           "SELECT source_work_item_id FROM work_item_links WHERE target_work_item_id=? AND link_type='depends_on' ORDER BY source_work_item_id", target,
         ).map((r) => r.source_work_item_id);
+      },
+      /** A dep is satisfied when its status is terminal (completed OR cancelled). */
+      allDepsSatisfied(source: string): boolean {
+        for (const t of this.dependsOn(source)) {
+          const wi = tx.get<{ status: string }>('SELECT status FROM work_items WHERE id=?', t);
+          if (!wi) throw new Error(`dependency target ${t} missing for ${source}`);
+          if (wi.status !== 'completed' && wi.status !== 'cancelled') return false;
+        }
+        return true;
+      },
+      unmetDeps(source: string): string[] {
+        const out: string[] = [];
+        for (const t of this.dependsOn(source)) {
+          const wi = tx.get<{ status: string }>('SELECT status FROM work_items WHERE id=?', t);
+          if (!wi) throw new Error(`dependency target ${t} missing for ${source}`);
+          if (wi.status !== 'completed' && wi.status !== 'cancelled') out.push(t);
+        }
+        return out;
+      },
+      /** True if adding source -depends_on-> target would create a cycle.
+       *  Adding source->target closes a cycle iff source is already reachable FROM target.
+       *  MUST be called inside the immediate (write) txn so it sees all committed edges. */
+      wouldCycle(source: string, target: string): boolean {
+        const stack = [target]; const seen = new Set<string>();
+        while (stack.length) {
+          const cur = stack.pop()!;
+          if (cur === source) return true;
+          if (seen.has(cur)) continue;
+          seen.add(cur);
+          for (const t of this.dependsOn(cur)) stack.push(t);
+        }
+        return false;
       },
     },
     defs: {

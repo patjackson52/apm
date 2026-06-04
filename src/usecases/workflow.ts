@@ -122,7 +122,7 @@ export function cascadeActivateDependents(ctx: Ctx, completedWorkItemId: string,
       const wi = r.workItems.byId(depId);
       if (!wi || wi.status !== 'draft') continue;          // only fresh, un-started work
       if (r.runs.activeForWorkItem(depId)) continue;       // already running
-      const allDepsDone = r.links.dependsOn(depId).every((t) => r.workItems.byId(t)?.status === 'completed');
+      const allDepsDone = r.links.allDepsSatisfied(depId);
       if (allDepsDone) out.push(depId);
     }
     return out;

@@ -4,6 +4,7 @@ import { ApmError, type ErrorCode } from '../domain/errors.js';
 export const CODE_HTTP: Record<ErrorCode, number> = {
   E_VALIDATION: 400,
   E_CONFLICT: 409,
+  E_DUPLICATE: 409,
   E_PRECONDITION: 409,
   E_LEASE_CONFLICT: 409,
   E_BLOCKED: 409,

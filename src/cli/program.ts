@@ -90,7 +90,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .option('--estimate <e>', 'estimate (XS|S|M|L|XL)')
     .option('--parent <id>', 'parent work item id')
     .requiredOption('--agent <name>', 'agent name')
-    .action(function (this: Command, o: { type: string; title: string; description?: string; priority?: number; estimate?: string; parent?: string; agent: string }) {
+    .option('--force', 'allow duplicate-titled sibling')
+    .action(function (this: Command, o: { type: string; title: string; description?: string; priority?: number; estimate?: string; parent?: string; agent: string; force?: boolean }) {
       process.exitCode = runCommand(buildDeps(), 'work create', (ctx) => ({
         data: work.create(ctx, {
           type: o.type as any,
@@ -100,6 +101,7 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
           estimate: o.estimate as any,
           parent: o.parent,
           agent: o.agent,
+          force: o.force,
         }),
       }));
     });

@@ -60,6 +60,17 @@ describe('auto-activate-dependents cascade (rec #4, flag-gated)', () => {
     expect(n.data.work_item).toBe(d.id);
   });
 
+  it('ON (policy flag): CANCELLING the prerequisite auto-activates the draft dependent (terminal-satisfies)', () => {
+    const p = work.create(ctx(), { type: 'feature', title: 'P', agent: 'claude' });
+    const d = work.create(ctx(), { type: 'feature', title: 'D', agent: 'claude' });
+    work.link(ctx(), d.id, p.id, 'claude');
+    enableCascade(p.id);
+    work.update(ctx(), p.id, { status: 'cancelled' }, 'claude');
+    const res = wf.cascadeActivateDependents(ctx(), p.id, 'claude');
+    expect(res.activated).toEqual([d.id]);
+    expect(work.show(ctx(), d.id).status).toBe('ready');
+  });
+
   it('only activates when ALL deps complete', () => {
     const p1 = work.create(ctx(), { type: 'feature', title: 'P1', agent: 'claude' });
     const p2 = work.create(ctx(), { type: 'feature', title: 'P2', agent: 'claude' });

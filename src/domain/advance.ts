@@ -60,6 +60,9 @@ export function enterStep(
     if ((openChildren?.c ?? 0) > 0) {
       throw new ApmError('E_PRECONDITION', 'cannot complete: work item has incomplete children');
     }
+    if (!r.links.allDepsSatisfied(run.work_item_id)) {
+      throw new ApmError('E_PRECONDITION', 'cannot complete: dependencies incomplete');
+    }
     r.runs.setStatus(runId, 'completed', tx.now());
     r.workItems.setStatus(run.work_item_id, 'completed', actor, tx.now());
     tx.appendEvent({

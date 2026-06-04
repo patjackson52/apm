@@ -60,7 +60,7 @@ export function enrichLease(base: LeaseView, tx: Tx, clock: Clock, cache: Enrich
   return {
     ...base,
     agent_type: agentTypeFor(tx, base.agent, cache),
-    current_step: currentStepFor(tx, base.work_item, cache),
+    current_step: base.work_item ? currentStepFor(tx, base.work_item, cache) : null,
     ttl: formatTtl(ttl_seconds),
     ttl_seconds,
   };

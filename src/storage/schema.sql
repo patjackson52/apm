@@ -63,6 +63,7 @@ CREATE TABLE sessions (
 );
 CREATE UNIQUE INDEX ux_session_live ON sessions(agent_id) WHERE status IN ('active','idle');
 
+-- NOTE: migration v2 generalizes this table to resource leases (resource_type/resource_key, nullable work_item_id); see src/storage/migrations.ts.
 CREATE TABLE leases (
   id TEXT PRIMARY KEY,
   work_item_id TEXT NOT NULL,
