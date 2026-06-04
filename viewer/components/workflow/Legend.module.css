@@ -1,0 +1,7 @@
+.legend { position: absolute; bottom: 8px; left: 8px; display: flex; flex-wrap: wrap; gap: 6px 12px; list-style: none; margin: 0; padding: 8px; font-size: 11px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); max-width: 60%; }
+.item { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 8px; height: 8px; border-radius: 2px; background: var(--accent); display: inline-block; }
+.t_manual { background: var(--fg-muted); }
+.t_terminal { background: var(--status-completed-fg, var(--accent)); }
+.t_review_gate { background: var(--status-blocked-fg, var(--accent)); }
+.t_human_gate { background: var(--status-blocked-fg, var(--accent)); }

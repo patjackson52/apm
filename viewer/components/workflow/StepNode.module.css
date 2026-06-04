@@ -1,0 +1,15 @@
+.node { min-width: 150px; padding: 8px 10px; border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--radius-md); background: var(--bg-surface); color: var(--fg); }
+.node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.type { font-size: 12px; font-weight: 600; }
+.id { font-size: 11px; color: var(--fg-muted); font-family: var(--font-mono, monospace); }
+.t_agent_prompt { border-left-color: var(--accent); }
+.t_agent_execution { border-left-color: var(--accent); }
+.t_review_gate { border-left-color: var(--status-blocked-fg, var(--accent)); }
+.t_human_gate { border-left-color: var(--status-blocked-fg, var(--accent)); }
+.t_decision { border-left-color: var(--accent); }
+.t_decompose { border-left-color: var(--accent); }
+.t_integration { border-left-color: var(--accent); }
+.t_integration_loop { border-left-color: var(--accent); }
+.t_manual { border-left-color: var(--fg-muted); }
+.t_terminal { border-left-color: var(--status-completed-fg, var(--accent)); }
+.t_unknown { border-left-color: var(--fg-muted); }
