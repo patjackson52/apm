@@ -23,6 +23,41 @@ function capsMatch(required: string[], caller: Caller): boolean {
   return caller.match === 'all' ? required.every((c) => have.has(c)) : required.some((c) => have.has(c));
 }
 
+export type ListResolution =
+  | { status: 'dispatchable'; workItemIds: string[] }
+  | { status: 'idle'; reason: 'deps_pending' | 'all_leased' | 'capability_mismatch' | 'awaiting_human'; retryAfter: number }
+  | { status: 'drained' };
+
+/** Returns ranked list of all dispatchable candidates (for claim-walk dispatch). */
+export function selectCandidates(candidates: Candidate[], caller: Caller, _now: string): ListResolution {
+  if (candidates.length === 0) return { status: 'drained' };
+
+  const dispatchable: Candidate[] = [];
+  let sawDeps = false, sawLeased = false, sawCaps = false, sawHuman = false, sawPending = false;
+
+  for (const c of candidates) {
+    if (c.blockedByHumanGate) { sawHuman = true; continue; }
+    if (!c.hasPendingStep) continue;
+    sawPending = true;
+    if (!c.depsAllComplete) { sawDeps = true; continue; }
+    if (c.leaseLive && c.leaseHolderAgent !== caller.agent) { sawLeased = true; continue; }
+    if (!capsMatch(c.requiredCaps, caller)) { sawCaps = true; continue; }
+    dispatchable.push(c);
+  }
+
+  if (dispatchable.length > 0) {
+    dispatchable.sort((a, b) => b.priority - a.priority || a.createdAt.localeCompare(b.createdAt) || a.workItemId.localeCompare(b.workItemId));
+    return { status: 'dispatchable', workItemIds: dispatchable.map((c) => c.workItemId) };
+  }
+
+  if (sawDeps) return { status: 'idle', reason: 'deps_pending', retryAfter: 30 };
+  if (sawLeased) return { status: 'idle', reason: 'all_leased', retryAfter: 30 };
+  if (sawCaps) return { status: 'idle', reason: 'capability_mismatch', retryAfter: 60 };
+  if (sawHuman) return { status: 'idle', reason: 'awaiting_human', retryAfter: 0 };
+  void sawPending; // mirrors selectCandidate — declared for symmetry
+  return { status: 'drained' };
+}
+
 /** Pure dispatch decision over pre-computed candidates. `now` reserved for future time-based ranking. */
 export function selectCandidate(candidates: Candidate[], caller: Caller, now: string): Resolution {
   if (candidates.length === 0) return { status: 'drained' };
