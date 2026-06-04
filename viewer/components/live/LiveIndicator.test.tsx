@@ -16,6 +16,12 @@ describe('LiveIndicator', () => {
     expect(container.querySelector('[aria-live="polite"]')).not.toBeNull();
     expect(screen.getByText(/updated \d+s ago/)).toBeTruthy();
   });
+  it('exposes a polite live status region (role=status announces refresh)', () => {
+    useLiveStatus.mockReturnValue({ state: 'live', lastUpdatedAt: Date.now(), isFetching: false, refresh: vi.fn() });
+    render(<LiveIndicator />);
+    const region = screen.getByRole('status');
+    expect(region).toHaveAttribute('aria-live', 'polite');
+  });
   it('applies the pulse class only while fetching', () => {
     useLiveStatus.mockReturnValue({ state: 'live', lastUpdatedAt: Date.now(), isFetching: true, refresh: vi.fn() });
     const { container } = render(<LiveIndicator />);
