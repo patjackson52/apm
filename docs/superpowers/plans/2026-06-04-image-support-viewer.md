@@ -192,7 +192,7 @@ git commit -m "feat(image): versions usecase (lineage, newest-first)"
 ## Task 3: Server routes — `/api/blob/:sha` (immutable cache) + image JSON routes
 
 **Files:**
-- Modify: `src/server/files.ts` (add `serveBlob`), `src/server/serve.ts` (4 routes)
+- Modify: `src/server/router.ts` (raw handlers must receive `params`), `src/server/serve.ts` (pass `params` to raw handlers + 4 routes), `src/server/files.ts` (add `serveBlob`, raster-only)
 - Test: `tests/server/blob-route.test.ts` (create), and extend an existing server route test for the JSON routes if one exists.
 
 - [ ] **Step 1: Write the failing test**
@@ -248,9 +248,24 @@ Expected: FAIL — `serveBlob` not exported.
 
 - [ ] **Step 3: Implement**
 
-In `src/server/files.ts`, add (reuses `ALLOWED_EXT`, `contentTypeFor`, `fs`, `path`):
+**First, make raw handlers receive `params`** (they currently get only `{ projectRoot, query }`, so `/api/blob/:sha` would never see its sha). In `src/server/router.ts`, update the `RawRun` type to include `params`:
 
 ```typescript
+export type RawRun = (rc: { projectRoot: string; params: Record<string, string>; query: URLSearchParams }, res: http.ServerResponse) => void;
+```
+
+In `src/server/serve.ts`, the raw-dispatch call site (currently `m.route.raw({ projectRoot, query: url.searchParams }, res)`) — add `params` (the matched params `m.params` are already computed by `matchRoute`):
+
+```typescript
+        m.route.raw({ projectRoot, params: m.params, query: url.searchParams }, res);
+```
+
+Then in `src/server/files.ts`, add `serveBlob` (raster-only — **deliberately excludes `.svg`** for parity with the existing `/api/files` jail, which excludes SVG to avoid its script surface):
+
+```typescript
+/** Raster image extensions served from the content-addressed blob store (SVG excluded for parity with the files jail). */
+const BLOB_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
+
 /** Serve a content-addressed blob by sha256 with immutable caching. sha must be 64 hex chars. */
 export function serveBlob(
   projectRoot: string,
@@ -263,20 +278,18 @@ export function serveBlob(
   let file: string | null = null;
   try {
     for (const name of fs.readdirSync(dir)) {
-      if (name.startsWith(sha + '.') && ALLOWED_EXT.has(path.extname(name).toLowerCase())) { file = path.join(dir, name); break; }
+      if (name.startsWith(sha + '.') && BLOB_EXT.has(path.extname(name).toLowerCase())) { file = path.join(dir, name); break; }
     }
   } catch { /* dir missing → 404 below */ }
   if (!file || !fs.statSync(file).isFile()) { res.writeHead(404); res.end(); return; }
   const ext = path.extname(file).toLowerCase();
-  const headers: Record<string, string> = {
+  res.writeHead(200, {
     ...baseHeaders,
     'Content-Type': contentTypeFor(ext),
     'X-Content-Type-Options': 'nosniff',
     'Cache-Control': 'public, max-age=31536000, immutable',
     ETag: `"${sha}"`,
-  };
-  if (ext === '.svg') headers['Content-Security-Policy'] = "default-src 'none'; sandbox";
-  res.writeHead(200, headers);
+  });
   res.end(fs.readFileSync(file));
 }
 ```
@@ -290,7 +303,7 @@ In `src/server/serve.ts`, add to the `ROUTES` array (import `serveBlob`, `image`
   { method: 'GET', pattern: '/api/images/:id/versions', run: ({ ctx, params }) => ({ items: image.versions(ctx, params.id) }) },
 ```
 
-> Confirm the `raw` handler receives `rc.params` — check `src/server/router.ts`/`serve.ts`. If raw handlers currently get only `{ projectRoot, query }`, extend the raw-handler call site to also pass `params` (the router already parses them for `run` handlers). Mirror how `:id` params reach `run` handlers.
+> Verify `m.params` is the field name `matchRoute` returns in `serve.ts` (the `run`-handler path already uses it). If `http` isn't imported in `router.ts` for the `RawRun` type, use the existing import or `import type http from 'node:http'`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -354,9 +367,10 @@ import { readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { resolveProjectRoot } from './resolvePath';
 
+// Raster only — SVG deliberately excluded for parity with viewer/lib/files/resolvePath.ts (avoids the SVG script surface).
 const EXT_CONTENT_TYPE: Record<string, string> = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+  '.gif': 'image/gif', '.webp': 'image/webp',
 };
 
 export type ResolvedBlob = { ok: true; absPath: string; contentType: string } | { ok: false };
@@ -449,7 +463,7 @@ Expected: FAIL — `ep.workImages` undefined.
 
 - [ ] **Step 3: Implement**
 
-In `viewer/lib/api/endpoints.ts`, add to the `ep` object (import `ImageViewSchema`, `pageSchema`, and a small items-wrapper `z.object({ items: z.array(ImageViewSchema) })` for versions):
+In `viewer/lib/api/endpoints.ts`, **first add `ImageViewSchema` to the existing `@apm/types` import** (the file imports other schemas + `pageSchema` from `@apm/types` and `z` from `zod`, but not `ImageViewSchema` yet), then add to the `ep` object (the versions schema is a small items-wrapper `z.object({ items: z.array(ImageViewSchema) })`):
 
 ```typescript
   workImages: { path: (id: string) => `/api/work/${id}/images`, schema: pageSchema(ImageViewSchema) },
@@ -997,7 +1011,9 @@ This is local-only; CI builds the branch fresh.
 
 **Spec coverage (§6 viewer):** serving + immutable cache P2 → Tasks 3 (server `/api/blob`) + 4 (viewer `/api/blob` proxy). Gallery K1 (`linkedImages`) → Tasks 5–6. Image detail + capture panel + version dropdown → Tasks 2 (`versions`) + 5 + 9. Zoom → Task 7. Diff overlays (side-by-side/swipe/onion-skin) → Task 8 + wired in 9. `ImageView` over the wire → Task 1. P3 (no thumbnails: lazy-load + responsive grid) → Task 6 (`loading="lazy"`, `object-fit`, `auto-fill minmax`). Docs → Task 10. Cross-lineage `image.paired` pairs UI labeled as a follow-up (the diff component is pair-agnostic — it takes two blobs — so wiring a pairs endpoint later reuses it).
 
-**Placeholder scan:** none. Three tasks (3, 4, 5) carry a "confirm the real signature/param-passing" note next to integration points (raw-handler `params`, `resolveProjectRoot` export, `endpoints.ts` imports) — verification reminders, not placeholders; code is complete.
+**Round-1 adversarial fixes applied:** (1) raw handlers now receive `params` — `RawRun` type (router.ts) + the `serve.ts` raw call site pass `params: m.params`, without which `/api/blob/:sha` would 404 every request; (2) `ImageViewSchema` explicitly added to the `endpoints.ts` `@apm/types` import (Task 5 wouldn't compile otherwise); (3) SVG dropped from BOTH blob resolvers (`serveBlob` `BLOB_EXT`, viewer `resolveBlob` `EXT_CONTENT_TYPE`) for parity with the existing `/api/files` jail that deliberately excludes SVG. ImageView↔ImageViewSchema field parity confirmed exact (18 fields, nullability matches); `resolveProjectRoot` + Next async-`params` signatures confirmed against real code.
+
+**Placeholder scan:** none. Remaining "verify `m.params` field name" notes are confirmation reminders next to complete code.
 
 **Type consistency:** `ImageViewSchema`/`ImageView` (Task 1) is the single wire type consumed by every hook (Task 5), gallery (6), detail (9). `serveBlob(projectRoot, sha, res, headers)` (Task 3) and `resolveBlob(root, sha)` (Task 4) signatures match their callers. `image.versions(ctx, id): ImageView[]` (Task 2) ↔ `/api/images/:id/versions` `{ items }` ↔ `imageVersions` schema (Task 5) ↔ `useImageVersions` (9). All image `<img>` `src` use `/api/blob/${blob}` consistently (gallery, zoom, diff). `ImageDiff` props (`beforeBlob/afterBlob/beforeAlt/afterAlt`) match the `ImageDetail` call site.
 ```
