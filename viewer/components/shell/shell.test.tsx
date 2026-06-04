@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 vi.mock('next/navigation', () => ({ usePathname: () => '/work' }));
 vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode } & Record<string, unknown>) => <a href={href} {...p}>{children}</a> }));
 
+import { renderWithClient } from '@/test/renderWithClient';
 import { Sidebar } from './Sidebar';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import { AppShell } from './AppShell';
@@ -33,7 +34,7 @@ describe('ProjectSwitcher', () => {
 
 describe('AppShell', () => {
   it('renders TopBar + Sidebar + main with children', () => {
-    render(<AppShell><p>content</p></AppShell>);
+    renderWithClient(<AppShell><p>content</p></AppShell>);
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument();
     expect(screen.getByText('content')).toBeInTheDocument();
@@ -41,7 +42,7 @@ describe('AppShell', () => {
   it('renders the ErrorBoundary fallback when a child throws', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const Boom = () => { throw new Error('x'); };
-    render(<AppShell><Boom /></AppShell>);
+    renderWithClient(<AppShell><Boom /></AppShell>);
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 });

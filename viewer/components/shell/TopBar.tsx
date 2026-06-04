@@ -2,6 +2,7 @@
 import s from './shell.module.css';
 import { useTheme } from '@/lib/theme/ThemeProvider';
 import { ProjectSwitcher } from './ProjectSwitcher';
+import { LiveIndicator } from '@/components/live/LiveIndicator';
 
 export function TopBar() {
   const { theme, toggle } = useTheme();
@@ -10,6 +11,7 @@ export function TopBar() {
       <span className={s.logo}>APM Viewer</span>
       <ProjectSwitcher />
       <span className={s.spacer} />
+      <LiveIndicator />
       <button type="button" className={s.iconBtn} onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>
         {theme === 'dark' ? '☾' : '☀'}
       </button>
