@@ -2,11 +2,19 @@ import { parse as parseYaml } from 'yaml';
 import { ApmError } from './errors.js';
 import { STEP_TYPES, type StepType, type ArtifactType, type WorkItemType } from './types.js';
 
+export interface CaptureSpec {
+  name: string;
+  kind: string;
+  route?: string;
+  viewport?: { w: number; h: number };
+  prompt?: string;
+}
+
 export interface StepOutput { artifact_type: ArtifactType; }
 export interface StepDef {
   id: string; type: StepType;
   prompt_id?: string;
-  requires?: { artifacts?: ArtifactType[]; capabilities?: string[] };
+  requires?: { artifacts?: ArtifactType[]; capabilities?: string[]; captures?: CaptureSpec[] };
   outputs?: StepOutput[];
   reviewers?: string[];
   pass_policy?: 'all_required';
@@ -39,6 +47,9 @@ export function validateWorkflow(def: WorkflowDef): void {
     if (s.on_reject !== undefined) {
       if (s.type !== 'review_gate') throw new ApmError('E_VALIDATION', `step ${s.id}: on_reject is only valid on a review_gate`);
       if (!ids.has(s.on_reject)) throw new ApmError('E_VALIDATION', `step ${s.id}: on_reject points at unknown step ${s.on_reject}`);
+    }
+    for (const cap of s.requires?.captures ?? []) {
+      if (!cap.name || !cap.kind) throw new ApmError('E_VALIDATION', `step ${s.id}: capture needs name and kind`);
     }
     if (s.type !== 'terminal' && !(s.next?.length)) throw new ApmError('E_VALIDATION', `non-terminal step ${s.id} needs a next`);
   }
