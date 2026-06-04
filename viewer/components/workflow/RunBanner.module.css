@@ -1,0 +1,4 @@
+.banner { padding: 6px 12px; font-size: 13px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; background: var(--bg-surface); }
+.b_paused { border-left: 3px solid var(--fg-muted); }
+.b_cancelled { border-left: 3px solid var(--status-cancelled-fg, var(--fg-muted)); }
+.b_blocked { border-left: 3px solid var(--status-blocked-fg, var(--accent)); }

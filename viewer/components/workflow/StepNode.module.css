@@ -13,3 +13,21 @@
 .t_manual { border-left-color: var(--fg-muted); }
 .t_terminal { border-left-color: var(--status-completed-fg, var(--accent)); }
 .t_unknown { border-left-color: var(--fg-muted); }
+
+.rs_pending { box-shadow: inset 3px 0 0 var(--fg-muted); }
+.rs_running { box-shadow: inset 3px 0 0 var(--status-active-fg, var(--accent)); }
+.rs_completed { box-shadow: inset 3px 0 0 var(--status-completed-fg, var(--accent)); }
+.rs_failed { box-shadow: inset 3px 0 0 var(--status-blocked-fg, var(--accent)); }
+.rs_skipped { box-shadow: inset 3px 0 0 var(--fg-muted); }
+.rs_unknown { box-shadow: inset 3px 0 0 var(--fg-muted); }
+.current { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (prefers-reduced-motion: no-preference) {
+  .current { animation: nodePulse 1.6s ease-in-out infinite; }
+}
+@keyframes nodePulse { 0%,100% { outline-color: var(--accent); } 50% { outline-color: var(--border); } }
+.reviewers { display: flex; gap: 3px; margin-top: 4px; }
+.badge { font-size: 11px; line-height: 1; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; border: 1px solid var(--border); color: var(--fg-muted); }
+.v_pass { color: var(--status-completed-fg, var(--accent)); }
+.v_reject { color: var(--status-blocked-fg, var(--accent)); }
+.v_abstain { color: var(--fg-muted); }
+.v_pending { color: var(--fg-muted); }
