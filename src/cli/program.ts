@@ -541,6 +541,13 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     });
 
   blockerCmd
+    .command('show <id>')
+    .description('Show a blocker (incl. linked bug images)')
+    .action(function (this: Command, id: string) {
+      process.exitCode = runCommand(buildDeps(), 'blocker show', (ctx) => ({ data: blocker.show(ctx, id) }));
+    });
+
+  blockerCmd
     .command('resolve <id>')
     .description('Resolve a blocker')
     .option('--resolution <r>', 'resolution description')
