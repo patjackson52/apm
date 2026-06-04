@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync } from 'node:fs';
+import { join as pathJoin } from 'node:path';
 import { Command } from 'commander';
 import type { Clock } from '../domain/clock.js';
 import { systemClock } from '../domain/clock.js';
@@ -22,6 +23,9 @@ import * as policy from '../usecases/policy.js';
 import * as prompt from '../usecases/prompt.js';
 import * as next from '../usecases/next.js';
 import * as statusUc from '../usecases/status.js';
+import * as image from '../usecases/image.js';
+import { putBlob } from '../storage/blobstore.js';
+import { resolveProjectRoot } from './run.js';
 
 export interface ProgramDeps {
   clock?: Clock;
@@ -749,6 +753,105 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
       });
       // rc=0 means render succeeded; override exit code with semantic next code
       process.exitCode = rc === 0 ? (nextResult ? next.nextExitCode(nextResult) : 0) : rc;
+    });
+
+  // --- image command group ---
+  const imageCmd = program.command('image').description('image / screenshot operations');
+
+  imageCmd
+    .command('add')
+    .description('Ingest an image and link it to a work item')
+    .requiredOption('--work-item <id>', 'work item id')
+    .requiredOption('--file <path>', 'path to the image file')
+    .option('--kind <k>', 'screenshot|mockup|diagram|reference|bug', 'screenshot')
+    .option('--alt <s>', 'alt / caption text')
+    .option('--capture-file <f>', 'path to a JSON file of capture metadata')
+    .option('--relation <r>', 'evidence|reference|bug|produced', 'evidence')
+    .requiredOption('--agent <name>', 'agent name')
+    .action(function (this: Command, o: { workItem: string; file: string; kind: string; alt?: string; captureFile?: string; relation: string; agent: string }) {
+      const deps = buildDeps();
+      const root = resolveProjectRoot(deps.dir);
+      const blob = putBlob(root, readFileSync(o.file)); // IO before the txn (C3)
+      const capture = o.captureFile ? JSON.parse(readFileSync(o.captureFile, 'utf8')) : undefined;
+      process.exitCode = runCommand(deps, 'image add', (ctx) => ({
+        data: image.add(ctx, { workItem: o.workItem, kind: o.kind, alt: o.alt, capture, relation: o.relation, agent: o.agent, blob }),
+      }));
+    });
+
+  imageCmd
+    .command('show <id>')
+    .description('Show an image (metadata + path; never bytes)')
+    .action(function (this: Command, id: string) {
+      process.exitCode = runCommand(buildDeps(), 'image show', (ctx) => ({ data: image.show(ctx, id) }));
+    });
+
+  imageCmd
+    .command('list')
+    .description('List images linked to a work item')
+    .requiredOption('--work-item <id>', 'work item id')
+    .action(function (this: Command, o: { workItem: string }) {
+      process.exitCode = runCommand(buildDeps(), 'image list', (ctx) => ({ data: image.list(ctx, { workItem: o.workItem }) }));
+    });
+
+  imageCmd
+    .command('revise <id>')
+    .description('Revise an image (creates a new version in the same lineage)')
+    .requiredOption('--file <path>', 'path to the new image file')
+    .option('--alt <s>', 'alt / caption text')
+    .option('--capture-file <f>', 'path to a JSON file of capture metadata')
+    .requiredOption('--agent <name>', 'agent name')
+    .action(function (this: Command, id: string, o: { file: string; alt?: string; captureFile?: string; agent: string }) {
+      const deps = buildDeps();
+      const blob = putBlob(resolveProjectRoot(deps.dir), readFileSync(o.file));
+      const capture = o.captureFile ? JSON.parse(readFileSync(o.captureFile, 'utf8')) : undefined;
+      process.exitCode = runCommand(deps, 'image revise', (ctx) => ({ data: image.revise(ctx, id, { alt: o.alt, capture, agent: o.agent, blob }) }));
+    });
+
+  imageCmd
+    .command('find')
+    .description('Find image(s) referencing a blob hash')
+    .requiredOption('--blob <sha256>', 'blob sha256')
+    .action(function (this: Command, o: { blob: string }) {
+      process.exitCode = runCommand(buildDeps(), 'image find', (ctx) => ({ data: { items: image.find(ctx, o.blob) } }));
+    });
+
+  imageCmd
+    .command('pair <a> <b>')
+    .description('Record a before/after (or other) pairing between two images')
+    .option('--kind <k>', 'pair kind', 'before-after')
+    .requiredOption('--agent <name>', 'agent name')
+    .action(function (this: Command, a: string, b: string, o: { kind: string; agent: string }) {
+      process.exitCode = runCommand(buildDeps(), 'image pair', (ctx) => {
+        image.pair(ctx, { a, b, kind: o.kind, agent: o.agent });
+        return { data: { paired: [a, b], kind: o.kind } };
+      });
+    });
+
+  imageCmd
+    .command('save <id>')
+    .description('Write an image\'s bytes to a file')
+    .requiredOption('--to <path>', 'destination path')
+    .action(function (this: Command, id: string, o: { to: string }) {
+      const deps = buildDeps();
+      const root = resolveProjectRoot(deps.dir);
+      process.exitCode = runCommand(deps, 'image save', (ctx) => {
+        const v = image.show(ctx, id);
+        copyFileSync(pathJoin(root, v.path), o.to);
+        return { data: { id: v.id, saved_to: o.to } };
+      });
+    });
+
+  imageCmd
+    .command('embed <id>')
+    .description('Emit a markdown embed snippet (apm:ID, or --resolve for a real path)')
+    .option('--resolve', 'emit a real relative blob path for external markdown renderers')
+    .action(function (this: Command, id: string, o: { resolve?: boolean }) {
+      process.exitCode = runCommand(buildDeps(), 'image embed', (ctx) => {
+        const v = image.show(ctx, id);
+        const alt = v.alt ?? v.id;
+        const target = o.resolve ? v.path : `apm:${v.id}`;
+        return { data: { id: v.id, markdown: `![${alt}](${target})` } };
+      });
     });
 
   // --- status command ---
