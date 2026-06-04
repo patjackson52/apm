@@ -144,6 +144,18 @@ describe('image.show/revise/find/pair', () => {
   });
 });
 
+describe('image.versions', () => {
+  it('returns all versions of an image lineage, newest first', () => {
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'V', agent: 'agent:claude' });
+    const a = image.add(ctx, { workItem: wi.id, kind: 'screenshot', alt: 'v1', agent: 'agent:claude', blob: putBlob(dir, PNG) });
+    image.revise(ctx, a.id, { alt: 'v2', agent: 'agent:claude', blob: putBlob(dir, PNG) });
+    const vs = image.versions(ctx, a.id);
+    expect(vs.map((v) => v.version)).toEqual([2, 1]);
+    expect(vs.every((v) => v.root === a.root)).toBe(true);
+  });
+});
+
 describe('bug capture (--blocker)', () => {
   it('links a bug screenshot to a blocker, discoverable via imagesByBlocker', () => {
     const ctx = { storage, clock };

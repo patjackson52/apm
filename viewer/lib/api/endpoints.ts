@@ -4,6 +4,7 @@ import {
   StatusViewSchema, WorkItemViewSchema, RunViewSchema, StepRunViewSchema,
   ArtifactViewSchema, DecisionViewSchema, WorkBlockersSchema, EnrichedBlockerViewSchema,
   LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, EventViewSchema, SessionViewSchema, ProjectViewSchema, SearchResultViewSchema,
+  ImageViewSchema,
 } from '@apm/types';
 
 const qs = (params: Record<string, string | number | undefined>): string => {
@@ -38,6 +39,9 @@ export const ep = {
   sessions: { path: () => '/api/sessions', schema: z.array(SessionViewSchema) },
   projects: { path: () => '/api/projects', schema: z.array(ProjectViewSchema) },
   search: { path: (q: string, limit?: number) => `/api/search${qs({ q, limit })}`, schema: z.array(SearchResultViewSchema) },
+  workImages: { path: (id: string) => `/api/work/${id}/images`, schema: pageSchema(ImageViewSchema) },
+  image: { path: (id: string) => `/api/images/${id}`, schema: ImageViewSchema },
+  imageVersions: { path: (id: string) => `/api/images/${id}/versions`, schema: z.object({ items: z.array(ImageViewSchema) }) },
 } as const;
 
 export interface EventsFilter { entityType?: string; entityId?: string; limit?: number; offset?: number; }

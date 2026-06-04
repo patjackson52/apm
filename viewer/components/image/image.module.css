@@ -1,0 +1,20 @@
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.cell { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; display: block; text-decoration: none; color: inherit; }
+.cell img { width: 100%; height: 140px; object-fit: contain; background: var(--bg-muted, rgb(17 17 17)); display: block; }
+.cap { font-size: 12px; padding: 6px 8px; color: var(--fg-muted); }
+.empty { color: var(--fg-muted); font-size: 14px; }
+.panel { display: grid; gap: 12px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 13px; }
+.kv dt { color: var(--fg-muted); }
+.stage { position: relative; overflow: hidden; background: var(--bg-muted, rgb(17 17 17)); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.stage img { display: block; max-width: 100%; }
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.zoomWrap { overflow: auto; max-height: 70vh; cursor: zoom-in; }
+.zoomImg { display: block; max-width: 100%; transition: transform 0.1s ease; transform-origin: top left; }
+.zoomed { cursor: zoom-out; max-width: none; transform: scale(2); }
+.diffModes { display: flex; gap: 6px; }
+.sideBySide { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.overlay { position: relative; }
+.overlay img { position: absolute; top: 0; left: 0; width: 100%; }
+.overlay .base { position: relative; }
+.clip { position: absolute; top: 0; left: 0; height: 100%; overflow: hidden; }

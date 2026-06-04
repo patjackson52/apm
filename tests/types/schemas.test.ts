@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   envelopeSchema, pageSchema,
   WorkItemViewSchema, BlockerViewSchema, EnrichedBlockerViewSchema,
+  ImageViewSchema,
 } from '@apm/types';
 import { z } from 'zod';
 
@@ -39,5 +40,22 @@ describe('@apm/types schemas', () => {
     };
     expect(WorkItemViewSchema.safeParse(base).success).toBe(true);
     expect(WorkItemViewSchema.safeParse({ ...base, status: 'ready', lease: null }).success).toBe(true);
+  });
+});
+
+describe('ImageViewSchema', () => {
+  it('accepts a full ImageView', () => {
+    const v = {
+      id: 'IMG-1', version: 1, status: 'draft', root: 'IMG-1', supersedes: null,
+      kind: 'screenshot', blob: 'a'.repeat(64), mime: 'image/png', ext: 'png',
+      width: 1280, height: 800, byte_size: 4242, alt: 'home', capture: { route: '/home' },
+      path: '.apm/blobs/aa/' + 'a'.repeat(64) + '.png',
+      created_by: 'claude', created_at: '2026-06-04T00:00:00.000Z', work_item: 'WI-1',
+    };
+    expect(ImageViewSchema.safeParse(v).success).toBe(true);
+  });
+  it('rejects an unknown key (strict)', () => {
+    const bad = { id: 'IMG-1', extra: true } as any;
+    expect(ImageViewSchema.safeParse(bad).success).toBe(false);
   });
 });

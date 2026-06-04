@@ -25,3 +25,11 @@ describe('keys', () => {
     expect(qk.blockers()).toEqual(['blockers', null]);
   });
 });
+
+describe('image endpoints', () => {
+  it('builds image endpoint paths', () => {
+    expect(ep.workImages.path('WI-1')).toBe('/api/work/WI-1/images');
+    expect(ep.image.path('IMG-2')).toBe('/api/images/IMG-2');
+    expect(ep.imageVersions.path('IMG-2')).toBe('/api/images/IMG-2/versions');
+  });
+});

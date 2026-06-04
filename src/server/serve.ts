@@ -8,7 +8,7 @@ import { findProjectDb, type Ctx } from '../cli/run.js';
 import { ApmError } from '../domain/errors.js';
 import { ok, fail, buildMeta } from '../format/envelope.js';
 import { matchRoute, type Route } from './router.js';
-import { serveFile } from './files.js';
+import { serveFile, serveBlob } from './files.js';
 import { loadRegistry, ensureRegistered, resolveProjectDir, listProjects } from './registry.js';
 import { httpStatusFor } from './httpError.js';
 import * as enrich from './enrich.js';
@@ -24,6 +24,7 @@ import * as gate from '../usecases/gate.js';
 import * as events from '../usecases/events.js';
 import * as session from '../usecases/session.js';
 import * as search from '../usecases/search.js';
+import * as image from '../usecases/image.js';
 
 const num = (q: URLSearchParams, k: string): number | undefined => {
   const v = q.get(k); return v == null ? undefined : parseInt(v, 10);
@@ -53,6 +54,10 @@ export const ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/blockers', run: ({ ctx, query }) => enrich.listEnrichedBlockers(ctx, str(query, 'work-item')) },
   { method: 'GET', pattern: '/api/gates', run: ({ ctx, query }) => enrich.listEnrichedGates(ctx, { workItem: str(query, 'work-item') }) },
   { method: 'GET', pattern: '/api/files', raw: (rc, res) => serveFile(rc.projectRoot, rc.query.get('path'), res, SECURITY_HEADERS) },
+  { method: 'GET', pattern: '/api/blob/:sha', raw: (rc, res) => serveBlob(rc.projectRoot, rc.params.sha, res, SECURITY_HEADERS) },
+  { method: 'GET', pattern: '/api/work/:id/images', run: ({ ctx, params, query }) => image.list(ctx, { workItem: params.id, limit: num(query, 'limit'), offset: num(query, 'offset') }) },
+  { method: 'GET', pattern: '/api/images/:id', run: ({ ctx, params }) => image.show(ctx, params.id) },
+  { method: 'GET', pattern: '/api/images/:id/versions', run: ({ ctx, params }) => ({ items: image.versions(ctx, params.id) }) },
 ];
 
 /** Security response headers applied to every response (JSON + files). */
@@ -103,7 +108,7 @@ export function createListener(dir: string, clock: Clock): http.RequestListener 
     if (m.route.raw) {
       try {
         const projectRoot = path.dirname(path.dirname(findProjectDb(projectDir)));
-        m.route.raw({ projectRoot, query: url.searchParams }, res);
+        m.route.raw({ projectRoot, params: m.params, query: url.searchParams }, res);
       } catch (e) {
         const apm = e instanceof ApmError ? e : new ApmError('E_INTERNAL', String((e as Error)?.message ?? e));
         writeJson(res, httpStatusFor(apm), fail(apm, buildMeta(cmd, clock)));

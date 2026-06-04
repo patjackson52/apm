@@ -134,6 +134,16 @@ export function find(ctx: Ctx, sha256: string): ImageView[] {
   });
 }
 
+export function versions(ctx: Ctx, id: string): ImageView[] {
+  return ctx.storage.transaction('deferred', (tx) => {
+    const r = repos(tx);
+    const row = r.artifacts.byId(id);
+    if (!row || row.type !== 'image') throw new ApmError('E_NOT_FOUND', `image ${id} not found`);
+    const link: any = tx.get('SELECT work_item_id FROM work_item_artifacts WHERE root_artifact_id=? LIMIT 1', row.root_artifact_id);
+    return r.artifacts.versionsOfRoot(row.root_artifact_id).map((vr: any) => toImageView(vr, link?.work_item_id ?? null));
+  });
+}
+
 export interface PairArgs { a: string; b: string; kind: string; agent: string }
 
 export function pair(ctx: Ctx, p: PairArgs): void {
