@@ -48,6 +48,17 @@ export const MIGRATIONS: Array<{ version: number; up: (db: Database.Database, st
       db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)').run(2, stamp);
     },
   },
+  // v3: advisory dedup. dedup_key (normalized title) + (parent_id, dedup_key) index.
+  // schema.sql stays at the v1 baseline, so this ALTER always runs old→new — no
+  // duplicate-column / duplicate-index collisions.
+  {
+    version: 3,
+    up: (db, stamp) => {
+      db.exec(`ALTER TABLE work_items ADD COLUMN dedup_key TEXT;`);
+      db.exec(`CREATE INDEX ix_wi_dedup ON work_items(parent_id, dedup_key);`);
+      db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)').run(3, stamp);
+    },
+  },
 ];
 
 export const CURRENT_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

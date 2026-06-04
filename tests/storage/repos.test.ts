@@ -24,7 +24,7 @@ describe('repos', () => {
     const id = s.transaction('immediate', (tx) => {
       const r = repos(tx);
       r.agents.ensure('claude');
-      return r.workItems.insert({ type: 'feature', title: 'Offline', description: 'd', priority: 2, estimate: 'M', parentId: null, createdBy: 'claude' });
+      return r.workItems.insert({ type: 'feature', title: 'Offline', description: 'd', priority: 2, estimate: 'M', parentId: null, createdBy: 'claude', dedupKey: null });
     });
     expect(id).toBe('WI-1');
     const row = s.transaction('deferred', (tx) => repos(tx).workItems.byId('WI-1'));
@@ -38,8 +38,8 @@ describe('repos', () => {
     const deps = s.transaction('immediate', (tx) => {
       const r = repos(tx);
       r.agents.ensure('claude');
-      const a = r.workItems.insert({ type: 'feature', title: 'A', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude' });
-      const b = r.workItems.insert({ type: 'task', title: 'B', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude' });
+      const a = r.workItems.insert({ type: 'feature', title: 'A', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude', dedupKey: null });
+      const b = r.workItems.insert({ type: 'task', title: 'B', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude', dedupKey: null });
       r.links.add(a, b, 'depends_on');
       return r.links.dependsOn(a);
     });
@@ -66,7 +66,7 @@ describe('repos extensions', () => {
     const s = mem();
     expect(() => s.transaction('immediate', (tx) => {
       const r = repos(tx); r.agents.ensure('claude');
-      const wi = r.workItems.insert({ type: 'feature', title: 'A', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude' });
+      const wi = r.workItems.insert({ type: 'feature', title: 'A', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude', dedupKey: null });
       const def = tx.allocateId('WD'); tx.run("INSERT INTO workflow_definitions (id,name,version,definition_json,status,created_at) VALUES (?, 'x', 1, '{}', 'active', ?)", def, tx.now());
       r.runs.insert(wi, def); r.runs.insert(wi, def); // second active run -> UNIQUE violation
     })).toThrowError(/UNIQUE/i);
@@ -77,7 +77,7 @@ describe('repos extensions', () => {
     const s = mem();
     const got = s.transaction('immediate', (tx) => {
       const r = repos(tx); r.agents.ensure('claude');
-      const wi = r.workItems.insert({ type: 'feature', title: 'A', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude' });
+      const wi = r.workItems.insert({ type: 'feature', title: 'A', description: null, priority: 0, estimate: null, parentId: null, createdBy: 'claude', dedupKey: null });
       const def = tx.allocateId('WD'); tx.run("INSERT INTO workflow_definitions (id,name,version,definition_json,status,created_at) VALUES (?, 'x', 1, '{}', 'active', ?)", def, tx.now());
       const run = r.runs.insert(wi, def);
       r.stepRuns.insertPending(run, 'brainstorm');

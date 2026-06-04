@@ -3,8 +3,9 @@ import { ApmError } from '../domain/errors.js';
 import { repos } from '../storage/repos.js';
 import { WORK_ITEM_TYPES, WORK_ITEM_STATUSES, ESTIMATES, type WorkItemType, type Estimate } from '../domain/types.js';
 import { toWorkItemView, toBlockerView, type WorkItemView, type BlockerView, type Page } from '../domain/entities.js';
+import { normalizeTitle } from '../domain/normalize.js';
 
-export interface CreateArgs { type: WorkItemType; title: string; description?: string; priority?: number; estimate?: Estimate; parent?: string; agent: string; }
+export interface CreateArgs { type: WorkItemType; title: string; description?: string; priority?: number; estimate?: Estimate; parent?: string; agent: string; force?: boolean; }
 
 /** Build the canonical view for a work-item id inside an existing tx. */
 function view(tx: any, id: string): WorkItemView {
@@ -31,7 +32,15 @@ export function create(ctx: Ctx, a: CreateArgs): WorkItemView {
     const r = repos(tx);
     r.agents.ensure(a.agent);
     if (a.parent && !r.workItems.byId(a.parent)) throw new ApmError('E_NOT_FOUND', `parent ${a.parent} not found`);
-    const id = r.workItems.insert({ type: a.type, title: a.title, description: a.description ?? null, priority: a.priority ?? 0, estimate: a.estimate ?? null, parentId: a.parent ?? null, createdBy: a.agent });
+    const dedupKey = normalizeTitle(a.title);
+    if (!a.force) {
+      const dup = tx.get<{ id: string }>(
+        "SELECT id FROM work_items WHERE dedup_key=? AND status NOT IN ('cancelled') AND ((parent_id IS NULL AND ? IS NULL) OR parent_id=?)",
+        dedupKey, a.parent ?? null, a.parent ?? null,
+      );
+      if (dup) throw new ApmError('E_DUPLICATE', `duplicate of ${dup.id} (use --force to override)`, [{ field: 'title', problem: 'duplicate sibling', got: a.title }]);
+    }
+    const id = r.workItems.insert({ type: a.type, title: a.title, description: a.description ?? null, priority: a.priority ?? 0, estimate: a.estimate ?? null, parentId: a.parent ?? null, createdBy: a.agent, dedupKey });
     return view(tx, id);
   });
 }

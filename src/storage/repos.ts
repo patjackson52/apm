@@ -4,6 +4,7 @@ import type { WorkItemType, Estimate, ArtifactType } from '../domain/types.js';
 export interface NewWorkItem {
   type: WorkItemType; title: string; description: string | null;
   priority: number; estimate: Estimate | null; parentId: string | null; createdBy: string | null;
+  dedupKey: string | null;
 }
 
 export interface NewArtifact {
@@ -44,9 +45,9 @@ export function repos(tx: Tx) {
       insert(w: NewWorkItem): string {
         const id = tx.allocateId('WI');
         tx.run(
-          `INSERT INTO work_items (id, type, title, description, status, priority, estimate, parent_id, created_by, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)`,
-          id, w.type, w.title, w.description, w.priority, w.estimate, w.parentId, w.createdBy, now, now,
+          `INSERT INTO work_items (id, type, title, description, status, priority, estimate, parent_id, created_by, created_at, updated_at, dedup_key)
+           VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?)`,
+          id, w.type, w.title, w.description, w.priority, w.estimate, w.parentId, w.createdBy, now, now, w.dedupKey,
         );
         tx.appendEvent({ actorId: w.createdBy, eventType: 'work_item.created', entityType: 'work_item', entityId: id, payload: { type: w.type, title: w.title } });
         return id;
