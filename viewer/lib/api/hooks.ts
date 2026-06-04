@@ -32,3 +32,4 @@ export const useAdr = (id: string, o?: Opt) => useApiQuery(qk.adrShow(id), ep.ad
 export const useBlockers = (wi?: string, o?: Opt) => useApiQuery(qk.blockers(wi), ep.blockers.path(wi), ep.blockers.schema, VOLATILE, o);
 export const useGates = (wi?: string, o?: Opt) => useApiQuery(qk.gates(wi), ep.gates.path(wi), ep.gates.schema, VOLATILE, o);
 export const useLeases = (f: { workItem?: string; agent?: string } = {}, o?: Opt) => useApiQuery(qk.leases(f), ep.leases.path(f), ep.leases.schema, VOLATILE, o);
+export const useEvents = (f: import('./endpoints').EventsFilter = {}, o?: Opt) => useApiQuery(qk.events(f), ep.events.path(f), ep.events.schema, VOLATILE, o);

@@ -3,7 +3,7 @@ import {
   envelopeSchema, pageSchema,
   StatusViewSchema, WorkItemViewSchema, RunViewSchema, StepRunViewSchema,
   ArtifactViewSchema, DecisionViewSchema, WorkBlockersSchema, EnrichedBlockerViewSchema,
-  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema,
+  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, EventViewSchema,
 } from '@apm/types';
 
 const qs = (params: Record<string, string | number | undefined>): string => {
@@ -34,6 +34,9 @@ export const ep = {
   blockers: { path: (workItem?: string) => `/api/blockers${qs({ 'work-item': workItem })}`, schema: z.array(EnrichedBlockerViewSchema) },
   gates: { path: (workItem?: string) => `/api/gates${qs({ 'work-item': workItem })}`, schema: z.array(EnrichedBlockerViewSchema) },
   leases: { path: (f: { workItem?: string; agent?: string } = {}) => `/api/leases${qs({ 'work-item': f.workItem, agent: f.agent })}`, schema: z.object({ items: z.array(LeaseViewSchema) }).strict() },
+  events: { path: (f: EventsFilter = {}) => `/api/events${qs({ 'entity-type': f.entityType, 'entity-id': f.entityId, limit: f.limit, offset: f.offset })}`, schema: pageSchema(EventViewSchema) },
 } as const;
+
+export interface EventsFilter { entityType?: string; entityId?: string; limit?: number; offset?: number; }
 // envelopeSchema re-exported for hooks/tests convenience
 export { envelopeSchema };
