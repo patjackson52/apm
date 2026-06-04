@@ -10,6 +10,7 @@ const NAV = [
   { href: '/workflows', label: 'Workflows' },
   { href: '/artifacts', label: 'Artifacts' },
   { href: '/blockers', label: 'Blockers & Gates' },
+  { href: '/sessions', label: 'Sessions' },
 ];
 
 export function Sidebar() {
