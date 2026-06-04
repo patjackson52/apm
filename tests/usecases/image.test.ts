@@ -90,3 +90,30 @@ describe('image.add', () => {
     expect(() => image.add(ctx, { workItem: wi.id, kind: 'screenshot', agent: 'agent:claude', blob: meta })).toThrow(/too large/);
   });
 });
+
+describe('image.show/revise/find/pair', () => {
+  it('shows by id, revises into a new version, finds by blob, pairs two images', () => {
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'F', agent: 'agent:claude' });
+    const a = image.add(ctx, { workItem: wi.id, kind: 'screenshot', alt: 'v1', agent: 'agent:claude', blob: putBlob(dir, PNG) });
+
+    expect(image.show(ctx, a.id).alt).toBe('v1');
+
+    // revise -> new version, same lineage
+    const rev = image.revise(ctx, a.id, { alt: 'v2', agent: 'agent:claude', blob: putBlob(dir, PNG) });
+    expect(rev.version).toBe(2);
+    expect(rev.root).toBe(a.root);
+
+    // find by blob (PNG bytes shared -> dedup -> both versions reference same sha)
+    const found = image.find(ctx, putBlob(dir, PNG).sha256);
+    expect(found.length).toBeGreaterThanOrEqual(1);
+
+    // pair: a second image + pair event
+    const b = image.add(ctx, { workItem: wi.id, kind: 'screenshot', alt: 'other', agent: 'agent:claude', blob: putBlob(dir, PNG) });
+    image.pair(ctx, { a: a.id, b: b.id, kind: 'before-after', agent: 'agent:claude' });
+    storage.transaction('deferred', (tx) => {
+      const ev: any = tx.get("SELECT payload_json FROM events WHERE event_type='image.paired' ORDER BY id DESC LIMIT 1");
+      expect(JSON.parse(ev.payload_json)).toMatchObject({ a: a.id, b: b.id, kind: 'before-after' });
+    });
+  });
+});
