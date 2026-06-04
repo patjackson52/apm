@@ -967,13 +967,26 @@ In `src/storage/repos.ts`, add to the `artifacts:` object (mirroring `imagesByBl
       },
 ```
 
-In `src/cli/program.ts`, add `--blocker` to the `image add` command:
+In `src/cli/program.ts`, in the `image add` command: add the `--blocker` option AND remove the `'evidence'` default from the existing `--relation` option (so that when `--relation` is not given, `o.relation` is `undefined` and the usecase default fires — `'bug'` when `--blocker` is set, else `'evidence'`):
 
 ```typescript
   .option('--blocker <id>', 'attach as bug evidence to a blocker')
 ```
 
-and pass `blocker: o.blocker` into the `image.add(ctx, { ... })` call.
+Change the existing relation option from `.option('--relation <r>', '...', 'evidence')` to drop the default:
+
+```typescript
+  .option('--relation <r>', 'evidence|reference|bug|produced')
+```
+
+In the action, pass both through (now possibly `undefined`, which the usecase resolves):
+
+```typescript
+        relation: o.relation,
+        blocker: o.blocker,
+```
+
+> Removing the CLI default is behavior-preserving for the non-blocker path: `add`/`addImageTx` already default `relation` to `'evidence'` when undefined. Confirm no existing `tests/cli/image.test.ts` case asserts the relation came from the CLI default (none should — they don't pass `--relation`).
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -992,8 +1005,10 @@ git commit -m "feat(image): --blocker bug-capture + imagesByBlocker query"
 ## Task 10: Surface bug images in `apm blocker show`
 
 **Files:**
-- Modify: `src/usecases/blocker.ts` (`show` returns blocker + `images`)
+- Modify: `src/usecases/blocker.ts` (`show` returns blocker + `images`), `src/cli/program.ts` (add the missing `blocker show <id>` command)
 - Test: `tests/usecases/blocker-images.test.ts` (create)
+
+> Note: there is currently NO `blocker show` CLI command (only `blocker create`/`resolve`). This task adds it — that's the user-facing surface §6 requires ("apm blocker show surfaces them").
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1058,18 +1073,33 @@ export function show(ctx: Ctx, id: string): BlockerView & { images: ImageView[] 
 }
 ```
 
-(`repos`/`ApmError`/`toBlockerView` are already imported in this file. `BlockerView & { images }` is assignable to `BlockerView`, so existing consumers are unaffected. The CLI `blocker show` already calls `blocker.show`, so `images` flows into its output automatically.)
+(`repos`/`ApmError`/`toBlockerView` are already imported in this file. `BlockerView & { images }` is assignable to `BlockerView`, so existing consumers are unaffected.)
 
-- [ ] **Step 4: Run test to verify it passes**
+Then add the `blocker show` CLI command. In `src/cli/program.ts`, find the `blocker` command group (`blockerCmd`, near the `blocker create`/`resolve` commands) and add:
 
-Run: `npx vitest run tests/usecases/blocker-images.test.ts`
-Expected: PASS.
+```typescript
+blockerCmd
+  .command('show <id>')
+  .description('Show a blocker (incl. linked bug images)')
+  .action(function (this: Command, id: string) {
+    process.exitCode = runCommand(buildDeps(), 'blocker show', (ctx) => ({ data: blocker.show(ctx, id) }));
+  });
+```
+
+(`blocker` is already imported as `* as blocker` in `program.ts`; mirror the existing `blocker create` action wiring.)
+
+- [ ] **Step 4: Run test + verify the CLI command exists**
+
+Run: `npx vitest run tests/usecases/blocker-images.test.ts && npm run typecheck`
+Expected: PASS; typecheck clean (the new `blocker show` command compiles).
+
+Quick manual check the CLI surface works (optional): `npx tsx src/bin/apm.ts --dir <tmp> blocker show <BLK-id> -o json` returns an envelope with an `images` array.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/usecases/blocker.ts tests/usecases/blocker-images.test.ts
-git commit -m "feat(blocker): surface linked bug images in blocker show"
+git add src/usecases/blocker.ts src/cli/program.ts tests/usecases/blocker-images.test.ts
+git commit -m "feat(blocker): blocker show command surfaces linked bug images"
 ```
 
 ---
@@ -1087,7 +1117,7 @@ In `CLAUDE.md`, on the `Steps:` line, append the image flag:
 · `step complete <run> <step> --image-file <f> [--image-kind screenshot] [--image-alt <s>] --agent <a>` (attach evidence screenshot; satisfies capture gates)
 ```
 
-On the `Images:` line, append `[--blocker <id>]` to the `image add` usage.
+On the `Images:` line, append `[--blocker <id>]` to the `image add` usage. On the `Blockers:` line, append `· `blocker show <id>` (incl. linked bug images)`.
 
 Add a one-line note near the Workflows section:
 
@@ -1162,6 +1192,8 @@ Expected: `next --format agent` prints a `REQUIRED_CAPTURES:` block with `home-s
 - Docs → Task 11. Verification → Task 12.
 
 **Round-1 adversarial fixes applied:** Task 7 test uses the real `next.next(ctx, {agent, capabilities:[], match:'any'})` signature and asserts `r.data.required_captures`. Task 9 test seeds `blockers.insert({ workItemId, type, reason })`. Task 6 keeps the `--body-file` read outside `runCommand` (no behavior drift). Cut: prompt `kind`, `CaptureRef`, `--capture-file` on `step complete`. Merged the relation query into the gate task. No schema migration remains.
+
+**Round-2 adversarial fixes applied:** Task 10 now ADDS the missing `blocker show <id>` CLI command (it didn't exist — only `create`/`resolve`) so the §6 "blocker show surfaces them" deliverable has a real user surface. Task 9 drops the commander `'evidence'` default on `image add --relation` so `--blocker` images correctly link as `relation='bug'` via the usecase default (the CLI default was masking it). Verified acyclic imports (`advance.ts → entities.ts`, `step.ts → image.ts`), `'bug'` ∈ `RELATIONS`, and no orphaned references to the cut scope.
 
 **Placeholder scan:** none. Three tasks (7, 9, 10) carry a "cross-check the real signature" note next to calls into pre-existing functions — verification reminders, not placeholders; the code is complete.
 
