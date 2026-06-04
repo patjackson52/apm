@@ -16,7 +16,14 @@ export function StepPopover({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    // Capture the element that had focus (the activating node) BEFORE we steal
+    // focus into the dialog, and restore it on close (RunGraph holds no node ref,
+    // so document.activeElement is the only reliable handle).
+    const trigger = document.activeElement as HTMLElement | null;
     ref.current?.focus();
+    return () => {
+      if (trigger?.isConnected) trigger.focus();
+    };
   }, []);
   const source = `${step.id} (${step.type})`;
   return (
@@ -31,6 +38,26 @@ export function StepPopover({
         if (e.key === 'Escape') {
           e.preventDefault();
           onClose();
+          return;
+        }
+        if (e.key === 'Tab' && ref.current) {
+          const f = ref.current.querySelectorAll<HTMLElement>(
+            'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])',
+          );
+          if (f.length === 0) {
+            e.preventDefault();
+            return;
+          }
+          const first = f[0]!;
+          const last = f[f.length - 1]!;
+          const active = document.activeElement;
+          if (e.shiftKey && active === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && active === last) {
+            e.preventDefault();
+            first.focus();
+          }
         }
       }}
     >
