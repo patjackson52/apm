@@ -115,6 +115,7 @@ export function revise(ctx: Ctx, id: string, a: ReviseArgs): ImageView {
       width: a.blob.width, height: a.blob.height, byte_size: a.blob.byte_size,
       alt: a.alt ?? prev.alt ?? null,
       capture: a.capture ?? prev.capture ?? null,
+      blocker: prev.blocker ?? null,
     };
     const newId = r.artifacts.insert(
       { type: 'image', title: metadata.alt ?? metadata.kind, body: metadata.alt ?? null, createdBy: a.agent, version: old.version + 1, rootId: old.root_artifact_id, supersedes: old.id, metadata },
