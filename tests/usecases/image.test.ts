@@ -102,6 +102,21 @@ describe('image.add', () => {
   });
 });
 
+import { addImageTx } from '../../src/usecases/image.js';
+
+describe('addImageTx (in-transaction)', () => {
+  it('inserts + links an image within a caller-provided transaction', () => {
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'TX', agent: 'agent:claude' });
+    const meta = putBlob(dir, PNG);
+    const v = storage.transaction('immediate', (tx) =>
+      addImageTx(tx, { workItem: wi.id, kind: 'screenshot', alt: 'x', relation: 'evidence', agent: 'agent:claude', blob: meta }),
+    );
+    expect(v.id).toMatch(/^IMG-/);
+    expect(v.work_item).toBe(wi.id);
+  });
+});
+
 describe('image.show/revise/find/pair', () => {
   it('shows by id, revises into a new version, finds by blob, pairs two images', () => {
     const ctx = { storage, clock };
