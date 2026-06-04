@@ -17,7 +17,7 @@ import {
   envelopeSchema, pageSchema,
   WorkItemViewSchema, RunViewSchema, StepRunViewSchema, ArtifactViewSchema,
   DecisionViewSchema, BlockerViewSchema, EnrichedBlockerViewSchema, WorkBlockersSchema,
-  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, StatusViewSchema,
+  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, StatusViewSchema, EventViewSchema,
 } from '@apm/types';
 
 const clock = fixedClock('2026-06-03T12:00:00.000Z');
@@ -69,4 +69,5 @@ describe('apm serve ↔ @apm/types contract', () => {
   it('/api/blockers (enriched array)', () => check('/api/blockers', z.array(EnrichedBlockerViewSchema)));
   it('/api/gates (enriched array)', () => check('/api/gates', z.array(EnrichedBlockerViewSchema)));
   it('/api/leases ({items}, no page wrapper)', () => check('/api/leases', z.object({ items: z.array(LeaseViewSchema) }).strict()));
+  it('/api/events (page)', () => check('/api/events', pageSchema(EventViewSchema)));
 });

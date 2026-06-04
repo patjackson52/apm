@@ -1,4 +1,4 @@
-import type { WorkFilters } from './endpoints';
+import type { WorkFilters, EventsFilter } from './endpoints';
 
 /** Query-key factory — stable, serializable arrays. */
 export const qk = {
@@ -19,4 +19,5 @@ export const qk = {
   blockers: (wi?: string) => ['blockers', wi ?? null] as const,
   gates: (wi?: string) => ['gates', wi ?? null] as const,
   leases: (f: { workItem?: string; agent?: string } = {}) => ['leases', f] as const,
+  events: (f: EventsFilter = {}) => ['events', f] as const,
 };
