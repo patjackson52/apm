@@ -109,6 +109,18 @@ function renderAgent(envelope: Envelope<any>): string {
       }
     }
 
+    if (Array.isArray(d.required_captures) && d.required_captures.length > 0) {
+      lines.push('');
+      lines.push('REQUIRED_CAPTURES:');
+      for (const c of d.required_captures) {
+        const parts = [c.name, `kind=${c.kind}`];
+        if (c.route) parts.push(`route=${c.route}`);
+        if (c.viewport) parts.push(`viewport=${c.viewport.w}x${c.viewport.h}`);
+        if (c.prompt) parts.push(`recipe=${c.prompt}`);
+        lines.push(parts.join('  '));
+      }
+    }
+
     if (Array.isArray(d.do_not) && d.do_not.length > 0) {
       lines.push('');
       lines.push('DO_NOT:');
