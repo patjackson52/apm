@@ -12,12 +12,13 @@ import * as workflow from '../../src/usecases/workflow.js';
 import * as artifact from '../../src/usecases/artifact.js';
 import * as lease from '../../src/usecases/lease.js';
 import * as blocker from '../../src/usecases/blocker.js';
+import * as session from '../../src/usecases/session.js';
 import { startServer } from '../../src/server/serve.js';
 import {
   envelopeSchema, pageSchema,
   WorkItemViewSchema, RunViewSchema, StepRunViewSchema, ArtifactViewSchema,
   DecisionViewSchema, BlockerViewSchema, EnrichedBlockerViewSchema, WorkBlockersSchema,
-  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, StatusViewSchema, EventViewSchema,
+  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, StatusViewSchema, EventViewSchema, SessionViewSchema,
 } from '@apm/types';
 
 const clock = fixedClock('2026-06-03T12:00:00.000Z');
@@ -36,6 +37,7 @@ beforeAll(async () => {
   artifact.create(ctx, { workItem: wi.id, type: 'spec', title: 'S', body: 'x', agent: 'claude' });
   lease.acquire(ctx, { workItem: wi.id, agent: 'claude', ttl: '30m' });
   blocker.create(ctx, { workItem: wi.id, type: 'missing_dependency', reason: 'x', agent: 'claude' });
+  session.start(ctx, 'claude');
   s.close();
   server = startServer({ dir, clock, port: 0 });
   await new Promise<void>((r) => server.on('listening', () => r()));
@@ -70,4 +72,5 @@ describe('apm serve ↔ @apm/types contract', () => {
   it('/api/gates (enriched array)', () => check('/api/gates', z.array(EnrichedBlockerViewSchema)));
   it('/api/leases ({items}, no page wrapper)', () => check('/api/leases', z.object({ items: z.array(LeaseViewSchema) }).strict()));
   it('/api/events (page)', () => check('/api/events', pageSchema(EventViewSchema)));
+  it('/api/sessions (array)', () => check('/api/sessions', z.array(SessionViewSchema)));
 });

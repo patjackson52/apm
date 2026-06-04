@@ -51,6 +51,16 @@ export const EventViewSchema = z.object({
   created_at: z.string(),
 }).strict();
 
+export const SessionViewSchema = z.object({
+  id: z.string(),
+  agent: z.string(),
+  status: z.enum(['active', 'idle', 'ended']),
+  context_summary: z.string().nullable(),
+  started_at: z.string(),
+  last_seen_at: z.string().nullable(),
+  ended_at: z.string().nullable(),
+}).strict();
+
 export const StepRunViewSchema = z.object({
   id: z.string(),
   run_id: z.string(),
