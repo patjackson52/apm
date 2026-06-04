@@ -227,6 +227,33 @@ export function repos(tx: Tx) {
       setSuperseded(id: string) {
         tx.run("UPDATE artifacts SET status='superseded' WHERE id=?", id);
       },
+      linkedImages(workItemId: string): string[] {
+        return tx.all<{ r: string }>(
+          `SELECT wia.root_artifact_id AS r
+           FROM work_item_artifacts wia
+           JOIN artifacts a ON a.id = wia.root_artifact_id
+           WHERE wia.work_item_id=? AND a.type='image'
+           ORDER BY r`,
+          workItemId,
+        ).map((x) => x.r);
+      },
+      imagesByBlob(sha256: string): any[] {
+        return tx.all(
+          "SELECT * FROM artifacts WHERE type='image' AND json_extract(metadata_json,'$.blob')=? ORDER BY id",
+          sha256,
+        );
+      },
+    },
+    blobs: {
+      insert(m: { sha256: string; mime: string; ext: string; byte_size: number; width: number | null; height: number | null }) {
+        tx.run(
+          'INSERT OR IGNORE INTO blobs (sha256, mime, ext, byte_size, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          m.sha256, m.mime, m.ext, m.byte_size, m.width, m.height, now,
+        );
+      },
+      byId(sha256: string): any | undefined {
+        return tx.get('SELECT * FROM blobs WHERE sha256=?', sha256);
+      },
     },
     decisions: {
       insert(d: NewDecision): string {

@@ -21,6 +21,9 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+import { putBlob } from '../../src/storage/blobstore.js';
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+
 describe('artifacts.insert metadata', () => {
   it('persists metadata and emits the given event type', () => {
     storage.transaction('immediate', (tx) => {
@@ -34,6 +37,20 @@ describe('artifacts.insert metadata', () => {
       expect(JSON.parse(row.metadata_json)).toEqual({ kind: 'screenshot', blob: 'deadbeef' });
       const ev: any = tx.get("SELECT event_type FROM events WHERE entity_id=? ORDER BY id DESC LIMIT 1", id);
       expect(ev.event_type).toBe('image.created');
+    });
+  });
+});
+
+describe('blobs repo + image queries', () => {
+  it('inserts a blob idempotently and reads it back', () => {
+    const meta = putBlob(dir, PNG);
+    storage.transaction('immediate', (tx) => {
+      const r = repos(tx);
+      r.blobs.insert(meta);
+      r.blobs.insert(meta); // OR IGNORE, no throw
+      const row: any = r.blobs.byId(meta.sha256);
+      expect(row.mime).toBe('image/png');
+      expect(row.width).toBe(1);
     });
   });
 });
