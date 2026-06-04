@@ -22,4 +22,5 @@ export const qk = {
   events: (f: EventsFilter = {}) => ['events', f] as const,
   sessions: () => ['sessions'] as const,
   projects: () => ['projects'] as const,
+  search: (q: string) => ['search', q] as const,
 };

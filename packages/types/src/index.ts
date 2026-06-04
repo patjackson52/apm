@@ -9,6 +9,7 @@ export type RunView = z.infer<typeof V.RunViewSchema>;
 export type StepRunView = z.infer<typeof V.StepRunViewSchema>;
 export type SessionView = z.infer<typeof V.SessionViewSchema>;
 export type ProjectView = z.infer<typeof V.ProjectViewSchema>;
+export type SearchResultView = z.infer<typeof V.SearchResultViewSchema>;
 export type EventView = z.infer<typeof V.EventViewSchema>;
 export type ArtifactView = z.infer<typeof V.ArtifactViewSchema>;
 export type DecisionView = z.infer<typeof V.DecisionViewSchema>;

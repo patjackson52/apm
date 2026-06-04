@@ -41,3 +41,4 @@ export const useLeases = (f: { workItem?: string; agent?: string } = {}, o?: Opt
 export const useEvents = (f: import('./endpoints').EventsFilter = {}, o?: Opt) => useApiQuery(qk.events(f), ep.events.path(f), ep.events.schema, VOLATILE, o);
 export const useSessions = (o?: Opt) => useApiQuery(qk.sessions(), ep.sessions.path(), ep.sessions.schema, SEMI, o);
 export const useProjects = (o?: Opt) => useApiQuery(qk.projects(), ep.projects.path(), ep.projects.schema, SEMI, o);
+export const useSearch = (q: string, o?: Opt & { enabled?: boolean }) => useApiQuery(qk.search(q), ep.search.path(q), ep.search.schema, false, o);
