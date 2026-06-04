@@ -1,11 +1,11 @@
-import { readFileSync, writeFileSync, copyFileSync } from 'node:fs';
+import { readFileSync, copyFileSync } from 'node:fs';
 import { join as pathJoin } from 'node:path';
 import { Command } from 'commander';
 import type { Clock } from '../domain/clock.js';
 import { systemClock } from '../domain/clock.js';
 import { initProject } from '../usecases/init.js';
 import { startServer } from '../server/serve.js';
-import { runCommand, resolveFormat } from './run.js';
+import { runCommand, resolveFormat, resolveProjectRoot } from './run.js';
 import type { RunDeps } from './run.js';
 import type { OutputFormat } from '../format/render.js';
 import * as work from '../usecases/work.js';
@@ -25,7 +25,6 @@ import * as next from '../usecases/next.js';
 import * as statusUc from '../usecases/status.js';
 import * as image from '../usecases/image.js';
 import { putBlob } from '../storage/blobstore.js';
-import { resolveProjectRoot } from './run.js';
 
 export interface ProgramDeps {
   clock?: Clock;
@@ -770,12 +769,12 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .requiredOption('--agent <name>', 'agent name')
     .action(function (this: Command, o: { workItem: string; file: string; kind: string; alt?: string; captureFile?: string; relation: string; agent: string }) {
       const deps = buildDeps();
-      const root = resolveProjectRoot(deps.dir);
-      const blob = putBlob(root, readFileSync(o.file)); // IO before the txn (C3)
-      const capture = o.captureFile ? JSON.parse(readFileSync(o.captureFile, 'utf8')) : undefined;
-      process.exitCode = runCommand(deps, 'image add', (ctx) => ({
-        data: image.add(ctx, { workItem: o.workItem, kind: o.kind, alt: o.alt, capture, relation: o.relation, agent: o.agent, blob }),
-      }));
+      process.exitCode = runCommand(deps, 'image add', (ctx) => {
+        const root = resolveProjectRoot(deps.dir);
+        const blob = putBlob(root, readFileSync(o.file)); // IO before the txn (C3)
+        const capture = o.captureFile ? JSON.parse(readFileSync(o.captureFile, 'utf8')) : undefined;
+        return { data: image.add(ctx, { workItem: o.workItem, kind: o.kind, alt: o.alt, capture, relation: o.relation, agent: o.agent, blob }) };
+      });
     });
 
   imageCmd
@@ -802,9 +801,11 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .requiredOption('--agent <name>', 'agent name')
     .action(function (this: Command, id: string, o: { file: string; alt?: string; captureFile?: string; agent: string }) {
       const deps = buildDeps();
-      const blob = putBlob(resolveProjectRoot(deps.dir), readFileSync(o.file));
-      const capture = o.captureFile ? JSON.parse(readFileSync(o.captureFile, 'utf8')) : undefined;
-      process.exitCode = runCommand(deps, 'image revise', (ctx) => ({ data: image.revise(ctx, id, { alt: o.alt, capture, agent: o.agent, blob }) }));
+      process.exitCode = runCommand(deps, 'image revise', (ctx) => {
+        const blob = putBlob(resolveProjectRoot(deps.dir), readFileSync(o.file)); // IO before the txn (C3)
+        const capture = o.captureFile ? JSON.parse(readFileSync(o.captureFile, 'utf8')) : undefined;
+        return { data: image.revise(ctx, id, { alt: o.alt, capture, agent: o.agent, blob }) };
+      });
     });
 
   imageCmd
@@ -833,8 +834,8 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .requiredOption('--to <path>', 'destination path')
     .action(function (this: Command, id: string, o: { to: string }) {
       const deps = buildDeps();
-      const root = resolveProjectRoot(deps.dir);
       process.exitCode = runCommand(deps, 'image save', (ctx) => {
+        const root = resolveProjectRoot(deps.dir);
         const v = image.show(ctx, id);
         copyFileSync(pathJoin(root, v.path), o.to);
         return { data: { id: v.id, saved_to: o.to } };

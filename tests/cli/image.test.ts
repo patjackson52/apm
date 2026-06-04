@@ -54,6 +54,18 @@ describe('apm image CLI', () => {
 
 import { readFileSync as rf, existsSync } from 'node:fs';
 
+describe('apm image error handling', () => {
+  it('a missing --file yields a clean error envelope, not a stack trace', () => {
+    const storage = new SqliteStorage(join(dir, '.apm', 'apm.db'), clock);
+    const wi = work.create({ storage, clock }, { type: 'feature', title: 'F', agent: 'agent:claude' });
+    storage.close();
+    const res = runCli(['image', 'add', '--work-item', wi.id, '--file', join(dir, 'does-not-exist.png'), '--agent', 'agent:claude']);
+    const parsed = JSON.parse(res.out);
+    expect(parsed.ok).toBe(false);
+    expect(res.code).not.toBe(0);
+  });
+});
+
 describe('apm image save + embed', () => {
   it('saves blob bytes to a path and emits embed snippets', () => {
     const storage = new SqliteStorage(join(dir, '.apm', 'apm.db'), clock);
