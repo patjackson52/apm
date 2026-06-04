@@ -8,6 +8,7 @@ import { DecisionDoc } from './DecisionDoc';
 import { AdrDoc } from './AdrDoc';
 import { VersionTimeline } from './VersionTimeline';
 import { Tabs, type TabDef } from './Tabs';
+import { ImagesGallery } from '@/components/image/ImagesGallery';
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Overview' },
@@ -16,6 +17,7 @@ const TABS: TabDef[] = [
   { id: 'decisions', label: 'Decisions' },
   { id: 'adrs', label: 'ADRs' },
   { id: 'artifacts', label: 'Artifacts' },
+  { id: 'images', label: 'Images' },
 ];
 
 export function WorkDetailTabs({ id }: { id: string }) {
@@ -47,6 +49,7 @@ export function WorkDetailTabs({ id }: { id: string }) {
         )}
         {active === 'decisions' && <DecisionsPanel id={id} />}
         {active === 'adrs' && <AdrsPanel />}
+        {active === 'images' && <ImagesGallery workItemId={id} />}
       </div>
     </>
   );
