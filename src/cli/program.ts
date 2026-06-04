@@ -25,6 +25,7 @@ import * as next from '../usecases/next.js';
 import * as statusUc from '../usecases/status.js';
 import * as image from '../usecases/image.js';
 import { putBlob } from '../storage/blobstore.js';
+import { copyImageArgs, openArgs, run as runPlatform } from '../platform/clipboard.js';
 
 export interface ProgramDeps {
   clock?: Clock;
@@ -852,6 +853,32 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
         const alt = v.alt ?? v.id;
         const target = o.resolve ? v.path : `apm:${v.id}`;
         return { data: { id: v.id, markdown: `![${alt}](${target})` } };
+      });
+    });
+
+  imageCmd
+    .command('copy <id>')
+    .description('Copy an image to the OS clipboard (macOS)')
+    .action(function (this: Command, id: string) {
+      const deps = buildDeps();
+      process.exitCode = runCommand(deps, 'image copy', (ctx) => {
+        const root = resolveProjectRoot(deps.dir);
+        const v = image.show(ctx, id);
+        runPlatform(copyImageArgs(process.platform, pathJoin(root, v.path)));
+        return { data: { id: v.id, copied: true } };
+      });
+    });
+
+  imageCmd
+    .command('open <id>')
+    .description('Open an image in the OS default viewer')
+    .action(function (this: Command, id: string) {
+      const deps = buildDeps();
+      process.exitCode = runCommand(deps, 'image open', (ctx) => {
+        const root = resolveProjectRoot(deps.dir);
+        const v = image.show(ctx, id);
+        runPlatform(openArgs(process.platform, pathJoin(root, v.path)));
+        return { data: { id: v.id, opened: true } };
       });
     });
 

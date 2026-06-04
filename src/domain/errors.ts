@@ -1,7 +1,7 @@
 export type ErrorCode =
   | 'E_VALIDATION' | 'E_NOT_FOUND' | 'E_LEASE_CONFLICT'
   | 'E_PRECONDITION' | 'E_BLOCKED' | 'E_AWAITING_HUMAN'
-  | 'E_CONFLICT' | 'E_INTERNAL';
+  | 'E_CONFLICT' | 'E_INTERNAL' | 'E_UNSUPPORTED';
 
 export interface Issue { field: string; problem: string; got?: unknown; }
 
@@ -14,6 +14,7 @@ export const CODE_EXIT: Record<ErrorCode, number> = {
   E_CONFLICT: 40,
   E_NOT_FOUND: 44,
   E_INTERNAL: 75,
+  E_UNSUPPORTED: 75,
 };
 
 const RETRYABLE: ReadonlySet<ErrorCode> = new Set(['E_LEASE_CONFLICT', 'E_INTERNAL']);
