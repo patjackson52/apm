@@ -5,6 +5,7 @@ import { repos } from '../storage/repos.js';
 import { selectCandidate, type Candidate, type Caller } from '../domain/resolver.js';
 import { buildContract, type ContextRef } from '../domain/contract.js';
 import { parseWorkflow, stepById } from '../domain/workflow.js';
+import { toImageView } from '../domain/entities.js';
 import { resolveCurrent } from './session.js';
 import { parseTtlSeconds } from './lease.js';
 
@@ -203,9 +204,16 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
     const requiredContext: ContextRef[] = [];
     for (const artType of stepDef.requires?.artifacts ?? []) {
       const art = r.artifacts.currentByTypeForWorkItem(workItemId, artType);
-      if (art) {
-        requiredContext.push({ id: art.id, version: art.version, type: art.type, title: art.title, one_line: art.title });
+      if (!art) continue;
+      const ref: ContextRef = { id: art.id, version: art.version, type: art.type, title: art.title, one_line: art.title };
+      if (art.type === 'image') {
+        const v = toImageView(art, workItemId);
+        ref.path = v.path;
+        ref.blob = v.blob;
+        if (v.alt != null) ref.alt = v.alt;
+        ref.one_line = v.alt ?? art.title;
       }
+      requiredContext.push(ref);
     }
 
     const requiredCaptures = stepDef.requires?.captures ?? [];

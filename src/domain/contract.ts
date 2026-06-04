@@ -1,6 +1,6 @@
 import type { StepDef } from './workflow.js';
 
-export interface ContextRef { id: string; version: number; type: string; title: string; one_line: string; }
+export interface ContextRef { id: string; version: number; type: string; title: string; one_line: string; path?: string; alt?: string; blob?: string; }
 export interface NextAction { cmd: string; args: Record<string, unknown>; }
 export interface Contract { allowed_action: string; do_not: string[]; when_done: string[]; next_actions: NextAction[]; }
 interface Ids { workItem: string; run: string; session: string; }
