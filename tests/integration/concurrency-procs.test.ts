@@ -53,11 +53,10 @@ function seed(n: number): { dbPath: string; ids: string[] } {
 }
 
 describe('multi-process dispatch', () => {
-  // Headline invariants, deterministically: N separate OS processes hit one WAL
-  // db; each takes a distinct item, no ERR (no uncaught SQLITE_BUSY), no item
-  // taken twice. Sequential execFileSync still proves uniqueness + no-error
-  // because each child opens its own connection on the shared WAL file and the
-  // claim-walk / slot governor see each other's committed leases.
+  // Sequential variant — deterministic correctness baseline. Each child opens its
+  // own connection on the shared WAL file; they run one-at-a-time so each sees
+  // all previously committed leases. This is NOT what exercises real contention
+  // (UNIQUE/SQLITE_BUSY retry) — the concurrent variant below does that.
   it('N agents take M ready items with no double-lease, no uncaught SQLITE_BUSY (sequential)', () => {
     const N = 6;
     const { dbPath } = seed(N);
@@ -74,19 +73,23 @@ describe('multi-process dispatch', () => {
 
     const taken = outs.filter((o) => o.startsWith('OK ')).map((o) => o.slice(3));
     expect(outs.some((o) => o.startsWith('ERR'))).toBe(false);
-    expect(new Set(taken).size).toBe(taken.length); // no item taken twice
+    // Assert dispatch count first: uniqueness is only meaningful if all N dispatched.
     expect(taken.length).toBe(N); // 6 agents, 6 items, cap 6 → all dispatch
+    expect(new Set(taken).size).toBe(taken.length); // no item taken twice
   });
 
-  // Concurrent variant — fires all N children simultaneously (Promise.all) so the
-  // claim-walk's SQLITE_BUSY / UNIQUE handling is actually exercised under real
-  // contention, not just sequential commits. Same invariants. If this proves
-  // flaky on a given machine the sequential test above remains the authority.
+  // Concurrent variant — fires all N children simultaneously so the claim-walk's
+  // SQLITE_BUSY / UNIQUE retry logic is actually exercised under real contention.
+  // Uses Promise.allSettled so every child's stdout is captured (OK/IDLE/DRAINED/ERR)
+  // even when a child exits non-zero — if a real SQLITE_BUSY escapes, the test
+  // reports "ERR <code>" clearly instead of an opaque "Command failed" rejection.
+  // Same invariants as sequential. If this proves flaky on a given machine the
+  // sequential test above remains the deterministic authority.
   it('N agents racing concurrently take M items with no double-lease, no uncaught SQLITE_BUSY (concurrent)', async () => {
     const N = 6;
     const { dbPath } = seed(N);
 
-    const results = await Promise.all(
+    const settled = await Promise.allSettled(
       Array.from({ length: N }, (_, i) =>
         execFileAsync('npx', ['tsx', 'scripts/next-once.ts', dbPath, `agent-${i}`], {
           encoding: 'utf8',
@@ -96,10 +99,18 @@ describe('multi-process dispatch', () => {
       ),
     );
 
+    // Collect every child's output line regardless of exit code.
+    const results = settled.map((s) =>
+      s.status === 'fulfilled'
+        ? s.value
+        : `ERR ${(s.reason as any)?.stdout?.trim() || (s.reason as any)?.code || (s.reason as any)?.message}`,
+    );
+
     const taken = results.filter((o) => o.startsWith('OK ')).map((o) => o.slice(3));
-    expect(results.some((o) => o.startsWith('ERR'))).toBe(false);
+    expect(results.some((o) => o.startsWith('ERR')), `ERR outputs: ${results.filter(o => o.startsWith('ERR')).join(', ')}`).toBe(false);
+    // Assert dispatch count first: uniqueness is only meaningful if all N dispatched.
+    expect(taken.length).toBe(N); // 6 agents, 6 items, cap 6 → all dispatch
     expect(new Set(taken).size).toBe(taken.length); // no item taken twice
-    expect(taken.length).toBe(N);
   }, 90000);
 });
 

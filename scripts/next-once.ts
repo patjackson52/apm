@@ -3,9 +3,10 @@
  *
  * Opens ONE WAL SQLite db, dispatches exactly one work item via `next.next`
  * (acquire mode → real work-item lease + fleet slot), then prints a single line:
- *   OK <work_item>   — dispatched, lease acquired
- *   IDLE <reason>    — nothing dispatchable for this agent right now
- *   ERR <code>       — an uncaught error (e.g. an SQLITE_BUSY that escaped)
+ *   OK <work_item>      — dispatched, lease acquired
+ *   IDLE <reason>      — nothing dispatchable for this agent right now
+ *   DRAINED <reason>   — all work items for this agent are complete / drained
+ *   ERR <code>         — an uncaught error (e.g. an SQLITE_BUSY that escaped)
  * and exits. Run as: `npx tsx scripts/next-once.ts <dbPath> <agent>`.
  *
  * Note: `systemClock` is a Clock const here (not a factory), so we use it directly.
