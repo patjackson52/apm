@@ -98,8 +98,8 @@ export function link(ctx: Ctx, source: string, target: string, agent: string): W
     const r = repos(tx);
     if (!r.workItems.byId(source)) throw new ApmError('E_NOT_FOUND', `${source} not found`);
     if (!r.workItems.byId(target)) throw new ApmError('E_NOT_FOUND', `${target} not found`);
-    const reciprocal = tx.get("SELECT 1 x FROM work_item_links WHERE source_work_item_id=? AND target_work_item_id=? AND link_type='depends_on'", target, source);
-    if (reciprocal) throw new ApmError('E_VALIDATION', 'cyclic dependency');
+    // Transitive cycle check — MUST run inside this immediate txn so it sees all committed edges.
+    if (r.links.wouldCycle(source, target)) throw new ApmError('E_VALIDATION', 'cyclic dependency');
     r.links.add(source, target, 'depends_on');
     tx.appendEvent({ actorId: agent, eventType: 'work_item.linked', entityType: 'work_item', entityId: source, payload: { depends_on: target } });
     return view(tx, source);

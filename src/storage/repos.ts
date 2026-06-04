@@ -99,6 +99,20 @@ export function repos(tx: Tx) {
         }
         return out;
       },
+      /** True if adding source -depends_on-> target would create a cycle.
+       *  Adding source->target closes a cycle iff source is already reachable FROM target.
+       *  MUST be called inside the immediate (write) txn so it sees all committed edges. */
+      wouldCycle(source: string, target: string): boolean {
+        const stack = [target]; const seen = new Set<string>();
+        while (stack.length) {
+          const cur = stack.pop()!;
+          if (cur === source) return true;
+          if (seen.has(cur)) continue;
+          seen.add(cur);
+          for (const t of this.dependsOn(cur)) stack.push(t);
+        }
+        return false;
+      },
     },
     defs: {
       byNameVersion(name: string, version: number): any | undefined {
