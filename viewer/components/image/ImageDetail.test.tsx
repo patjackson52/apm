@@ -25,7 +25,7 @@ beforeEach(() => {
 describe('ImageDetail', () => {
   it('shows the image, capture metadata, and a version selector', () => {
     render(<ImageDetail id="IMG-2" />);
-    expect(screen.getByRole('img')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /zoom/i })).toBeTruthy(); // the (zoomable) image
     expect(screen.getByText(/\/home/)).toBeTruthy(); // capture route shown
     expect(screen.getByText(/1280×800|1280x800/)).toBeTruthy(); // dimensions
     expect(screen.getByRole('combobox')).toBeTruthy(); // version dropdown
