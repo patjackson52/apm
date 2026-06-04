@@ -16,6 +16,7 @@
   "dependencies": {
     "@apm/types": "file:../packages/types",
     "@tanstack/react-query": "5.101.0",
+    "@xyflow/react": "^12.3.5",
     "dompurify": "^3.2.4",
     "mermaid": "^11.4.1",
     "next": "15.5.19",
