@@ -4,15 +4,17 @@
 
 **Goal:** Bind images to verification runs and gate workflow-step completion on required screenshots, with the requirement surfaced to agents and bug screenshots attached to blockers.
 
-**Architecture:** Workflow step defs gain `requires.captures` (a list of named capture specs). Step completion validates that linked `evidence` images satisfy each spec (matched on image `metadata.kind` + optional route/viewport) — a pure domain check inside `completeMainStep`. `apm step complete --image-file` ingests a screenshot (reusing Plan 1's blob store), links it as `evidence`, wraps it in an evidence doc that embeds the `IMG-N`, and sets `output_artifact_id` (K2). Required captures are surfaced in `apm next --format agent` as a `REQUIRED_CAPTURES:` block. Bug screenshots link to a blocker (`--blocker`) and appear in `apm blocker show`.
+**Architecture:** Workflow step defs gain `requires.captures` (a list of named capture specs). Step completion validates that linked `evidence` images satisfy each spec (matched on image `metadata.kind` + optional route/viewport) — a pure domain check inside `completeMainStep`. `apm step complete --image-file` ingests a screenshot (reusing Plan 1's blob store), links it as `evidence`, wraps it in an evidence doc that embeds the `IMG-N`, and sets `output_artifact_id` (K2). Required captures surface in `apm next --format agent` as a `REQUIRED_CAPTURES:` block. Bug screenshots link to a blocker (`--blocker`) and appear in `apm blocker show`.
 
-**Tech Stack:** TypeScript, Node, better-sqlite3, commander, vitest. No new deps (reuses Plan 1's `image-size`/blob store).
+**Tech Stack:** TypeScript, Node, better-sqlite3, commander, vitest. No new deps; no schema migration (reuses Plan 1's blob store + existing `prompt` entity).
 
-**Spec:** `docs/superpowers/specs/2026-06-04-image-support-design.md` (§5 Capture specs + prompts, §6 Linking & verification, K2/K4). Built on Plan 1 (merged: `src/usecases/image.ts`, `src/storage/blobstore.ts`, `IMG-` ids, `metadata_json`).
+**Spec:** `docs/superpowers/specs/2026-06-04-image-support-design.md` (§5 Capture specs + prompts, §6 Linking & verification, K2/K4). Built on merged Plan 1 (`src/usecases/image.ts`, `src/storage/blobstore.ts`, `IMG-` ids, `metadata_json`).
 
-**Scope decision (confirmed):** the agent-facing `REQUIRED_CAPTURES` surfacing is included HERE (not deferred to Plan 3). Plan 3 covers only `REQUIRED_CONTEXT` image-consume fields; Plan 4 covers the viewer.
+**Scope decision (confirmed):** the agent-facing `REQUIRED_CAPTURES` surfacing is included HERE. Plan 3 covers only `REQUIRED_CONTEXT` image-consume fields; Plan 4 covers the viewer.
 
-**Out of scope (later plans / YAGNI):** `produces.captures` (informational only — no consumer yet); perceptual-diff gating; `--clipboard` ingestion; viewer.
+**Capture prompt templates — no code needed.** Spec §5 "reuse the `prompt` entity" is already satisfied by the existing entity: author a recipe with `apm prompt create --name capture-login --body-file recipe.md`, reference it by name in a capture spec's `prompt:` field, and `apm next` surfaces it as `recipe=capture-login`. A prompt `kind` tag was considered and **cut** (no consumer in this plan — speculative metadata; revisit if a `prompt list --kind` filter or viewer grouping ever needs it).
+
+**Out of scope (later plans / YAGNI):** `produces.captures` (no consumer); prompt `kind`; perceptual-diff gating; `--clipboard` ingestion; viewer.
 
 ---
 
@@ -20,23 +22,21 @@
 
 **Create:**
 - `src/domain/captures.ts` — pure `unmetCaptures(required, images)` matcher + `CaptureImage` type. One responsibility: capture-spec ↔ image matching.
-- `tests/domain/captures.test.ts`, plus tests appended to existing files noted per task.
+- New test files noted per task.
 
 **Modify:**
 - `src/domain/workflow.ts` — `CaptureSpec` type; `requires.captures`; validate captures.
-- `src/domain/contract.ts` — `CaptureRef` type.
-- `src/domain/advance.ts` — capture gate in `completeMainStep`.
-- `src/domain/entities.ts` — (import only; `PromptView` gains `kind`).
-- `src/storage/schema.sql` — `prompt_definitions.kind` column.
-- `src/storage/repos.ts` — `linkedImagesByRelation`, `imagesByBlocker`, `prompts.insert(kind)`.
+- `src/domain/advance.ts` — capture gate in `completeMainStep` (+ a relation-filtered linked-image read in `repos.ts`).
+- `src/storage/repos.ts` — `linkedImagesByRelation`, `imagesByBlocker`.
 - `src/usecases/image.ts` — extract `addImageTx`; `AddArgs.blocker`.
 - `src/usecases/step.ts` — `CompleteArgs` image fields + evidence binding.
-- `src/usecases/prompt.ts` — `kind` on create/view.
-- `src/usecases/next.ts` — build `required_captures`.
+- `src/usecases/next.ts` — build `required_captures` (reuse `CaptureSpec`).
 - `src/usecases/blocker.ts` — surface images in `show`.
 - `src/format/render.ts` — `REQUIRED_CAPTURES:` block.
-- `src/cli/program.ts` — `step complete --image-file`, `image add --blocker`, `prompt create --kind`.
+- `src/cli/program.ts` — `step complete --image-file`, `image add --blocker`.
 - `CLAUDE.md` — doc the new flags.
+
+No schema change; no new types in `contract.ts` (the dispatch payload reuses `CaptureSpec`).
 
 ---
 
@@ -108,11 +108,11 @@ steps:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/domain/workflow.test.ts`
-Expected: FAIL — `captures` not a known field / no validation message.
+Expected: FAIL — no validation message for a nameless capture.
 
 - [ ] **Step 3: Implement**
 
-In `src/domain/workflow.ts`, add the `CaptureSpec` interface (above `StepDef`):
+In `src/domain/workflow.ts`, add the `CaptureSpec` interface above `StepDef`:
 
 ```typescript
 export interface CaptureSpec {
@@ -124,7 +124,7 @@ export interface CaptureSpec {
 }
 ```
 
-Extend `StepDef.requires` to include captures:
+Extend `StepDef.requires`:
 
 ```typescript
   requires?: { artifacts?: ArtifactType[]; capabilities?: string[]; captures?: CaptureSpec[] };
@@ -236,47 +236,10 @@ git commit -m "feat(domain): unmetCaptures matcher (kind + route + viewport)"
 
 ---
 
-## Task 3: `linkedImagesByRelation` repo query
+## Task 3: Capture gate in `completeMainStep` (+ relation-filtered query)
 
 **Files:**
-- Modify: `src/storage/repos.ts` (inside the `artifacts:` object, near `linkedImages`)
-- Test: covered by Task 4's gate test (a relation-filtered linked-image read).
-
-- [ ] **Step 1: Add the method**
-
-In `src/storage/repos.ts`, inside the `artifacts:` object, add:
-
-```typescript
-      linkedImagesByRelation(workItemId: string, relation: string): string[] {
-        return tx.all<{ r: string }>(
-          `SELECT wia.root_artifact_id AS r
-           FROM work_item_artifacts wia
-           JOIN artifacts a ON a.id = wia.root_artifact_id
-           WHERE wia.work_item_id=? AND wia.relation_type=? AND a.type='image'
-           ORDER BY r`,
-          workItemId, relation,
-        ).map((x) => x.r);
-      },
-```
-
-- [ ] **Step 2: Typecheck**
-
-Run: `npm run typecheck`
-Expected: clean.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/storage/repos.ts
-git commit -m "feat(storage): linkedImagesByRelation query"
-```
-
----
-
-## Task 4: Capture gate in `completeMainStep`
-
-**Files:**
-- Modify: `src/domain/advance.ts` (in `completeMainStep`, after the outputs check ~line 186; add imports)
+- Modify: `src/storage/repos.ts` (add `linkedImagesByRelation` in the `artifacts:` object), `src/domain/advance.ts` (gate in `completeMainStep`, after the outputs check ~line 186; add imports)
 - Test: `tests/usecases/step-captures.test.ts` (create)
 
 - [ ] **Step 1: Write the failing test**
@@ -351,6 +314,21 @@ Expected: FAIL — completion succeeds with no image (no gate yet), so the first
 
 - [ ] **Step 3: Implement**
 
+In `src/storage/repos.ts`, inside the `artifacts:` object (near `linkedImages`), add:
+
+```typescript
+      linkedImagesByRelation(workItemId: string, relation: string): string[] {
+        return tx.all<{ r: string }>(
+          `SELECT wia.root_artifact_id AS r
+           FROM work_item_artifacts wia
+           JOIN artifacts a ON a.id = wia.root_artifact_id
+           WHERE wia.work_item_id=? AND wia.relation_type=? AND a.type='image'
+           ORDER BY r`,
+          workItemId, relation,
+        ).map((x) => x.r);
+      },
+```
+
 In `src/domain/advance.ts`, add imports at the top:
 
 ```typescript
@@ -358,7 +336,7 @@ import { unmetCaptures } from './captures.js';
 import { toImageView } from './entities.js';
 ```
 
-In `completeMainStep`, after the `if (stepDef.type === 'agent_prompt' || stepDef.type === 'agent_execution') { ... }` outputs block, add (independent of step type):
+In `completeMainStep`, after the `if (stepDef.type === 'agent_prompt' || stepDef.type === 'agent_execution') { ... }` outputs block (and OUTSIDE that type guard, so it runs for every step type), add:
 
 ```typescript
   if (stepDef.requires?.captures?.length) {
@@ -377,14 +355,14 @@ In `completeMainStep`, after the `if (stepDef.type === 'agent_prompt' || stepDef
   }
 ```
 
-(`r`, `stepDef`, `runRow`, and `ApmError` are already in scope in `completeMainStep`.)
+(`r`, `stepDef` (derived via `stepById(def, stepRunRow.step_id)`), `runRow`, and `ApmError` are already in scope. `advance.ts → entities.ts` is acyclic — `entities.ts` does not import `advance.ts`.)
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/usecases/step-captures.test.ts`
 Expected: PASS (both).
 
-- [ ] **Step 5: Run full suite (no regression — existing workflows have no captures)**
+- [ ] **Step 5: Run full suite (no regression — existing workflows declare no captures)**
 
 Run: `npm test`
 Expected: PASS.
@@ -392,13 +370,13 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/domain/advance.ts tests/usecases/step-captures.test.ts
+git add src/storage/repos.ts src/domain/advance.ts tests/usecases/step-captures.test.ts
 git commit -m "feat(workflow): gate step completion on required captures"
 ```
 
 ---
 
-## Task 5: Extract `addImageTx` (refactor, no behavior change)
+## Task 4: Extract `addImageTx` (refactor, no behavior change)
 
 So `step complete --image-file` can ingest an image inside the step's transaction without duplicating image-insert logic.
 
@@ -440,7 +418,7 @@ In `src/usecases/image.ts`, add the `Tx` import:
 import type { Tx } from '../storage/storage.js';
 ```
 
-Replace the `add` function with an extracted helper + thin wrapper. The validation (kind/relation/size) moves into `addImageTx` so every caller is guarded:
+Replace the `add` function with an extracted helper + thin wrapper. Validation (kind/relation/size) moves into `addImageTx` so every caller is guarded:
 
 ```typescript
 /** Insert + link an image inside a caller-provided transaction. Validates kind/relation/size. */
@@ -506,7 +484,7 @@ git commit -m "refactor(image): extract addImageTx for in-transaction reuse"
 
 ---
 
-## Task 6: `step.complete` evidence binding (`--image-file` core, K2)
+## Task 5: `step.complete` evidence binding (K2)
 
 **Files:**
 - Modify: `src/usecases/step.ts` (`CompleteArgs` + `complete`)
@@ -517,26 +495,21 @@ git commit -m "refactor(image): extract addImageTx for in-transaction reuse"
 Append to `tests/usecases/step-captures.test.ts`:
 
 ```typescript
-import { putBlob as putBlob2 } from '../../src/storage/blobstore.js';
-
 describe('step.complete --image-file evidence binding', () => {
   it('ingests a screenshot, links it as evidence, embeds it in the output doc, and satisfies the gate', () => {
     const { wi, run } = setup();
-    const blob = putBlob2(dir, PNG);
+    const blob = putBlob(dir, PNG);
     const view = step.complete(ctx(), { run: run.id, step: 'shoot', agent: 'claude', imageBlob: blob, imageKind: 'screenshot', imageAlt: 'home' });
     expect(view).toBeTruthy();
 
-    // an evidence image is linked to the work item
     const imgs = image.list(ctx(), { workItem: wi.id });
     expect(imgs.items.length).toBe(1);
     const imgId = imgs.items[0].id;
 
-    // the step's output artifact is a doc embedding the image ref
     const out = storage.transaction('deferred', (tx) => {
       const sr: any = tx.get("SELECT output_artifact_id FROM workflow_step_runs WHERE run_id=? AND step_id='shoot'", run.id);
-      const art: any = tx.get('SELECT type, body FROM artifacts WHERE id=?', sr.output_artifact_id);
-      return art;
-    });
+      return tx.get('SELECT type, body FROM artifacts WHERE id=?', sr.output_artifact_id);
+    }) as any;
     expect(out.type).toBe('review');
     expect(out.body).toContain(`apm:${imgId}`);
   });
@@ -570,7 +543,6 @@ export interface CompleteArgs {
   imageBlob?: BlobMeta | null;
   imageKind?: string | null;
   imageAlt?: string | null;
-  imageCapture?: Record<string, unknown> | null;
 }
 ```
 
@@ -583,7 +555,6 @@ In `complete`, after the existing `if (a.artifactType && a.bodyFile) { ... }` bl
         workItem: runRow.work_item_id,
         kind: a.imageKind ?? 'screenshot',
         alt: a.imageAlt ?? undefined,
-        capture: a.imageCapture ?? undefined,
         relation: 'evidence',
         agent: a.agent,
         blob: a.imageBlob,
@@ -600,7 +571,7 @@ In `complete`, after the existing `if (a.artifactType && a.bodyFile) { ... }` bl
     }
 ```
 
-(`resolvedArtifactId` is the existing `let` from the artifact-type block; the image path takes precedence when both are supplied. `completeMainStep(..., { artifactId: resolvedArtifactId }, ...)` is unchanged and now also passes the capture gate because the evidence image was linked above.)
+(`resolvedArtifactId` is the existing `let` from the artifact-type block; the image path takes precedence when both are supplied. The evidence image is linked BEFORE `completeMainStep`, in the same transaction, so the capture gate passes.)
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -616,7 +587,7 @@ git commit -m "feat(step): --image-file evidence binding (image + embed doc + ou
 
 ---
 
-## Task 7: CLI `step complete --image-file`
+## Task 6: CLI `step complete --image-file`
 
 **Files:**
 - Modify: `src/cli/program.ts` (the `step complete` action)
@@ -693,7 +664,7 @@ Expected: FAIL — `--image-file` unknown option.
 
 - [ ] **Step 3: Implement**
 
-In `src/cli/program.ts`, find the `stepCmd.command('complete <runId> <stepId>')` block. Add the new options and rewrite the action to ingest the blob inside the `runCommand` callback (matching the Plan 1 error-handling pattern). `putBlob` and `resolveProjectRoot` are already imported (Plan 1).
+In `src/cli/program.ts`, find the `stepCmd.command('complete <runId> <stepId>')` block. Add the new options and put the blob ingest inside the `runCommand` callback. **Keep the existing `--body-file` read exactly where it is (outside `runCommand`)** to avoid changing that path's behavior — only the new image IO goes inside. `putBlob`/`resolveProjectRoot` are already imported (Plan 1).
 
 ```typescript
 stepCmd
@@ -706,17 +677,14 @@ stepCmd
   .option('--image-file <path>', 'attach an evidence screenshot (creates IMG + embeds in output doc)')
   .option('--image-kind <k>', 'image kind', 'screenshot')
   .option('--image-alt <s>', 'image alt text')
-  .option('--capture-file <f>', 'path to a JSON file of capture metadata for the image')
-  .action(function (this: Command, runId: string, stepId: string, o: { agent: string; artifact?: string; artifactType?: string; bodyFile?: string; imageFile?: string; imageKind: string; imageAlt?: string; captureFile?: string }) {
+  .action(function (this: Command, runId: string, stepId: string, o: { agent: string; artifact?: string; artifactType?: string; bodyFile?: string; imageFile?: string; imageKind: string; imageAlt?: string }) {
     const deps = buildDeps();
+    const bodyContent = o.bodyFile ? readFileSync(o.bodyFile, 'utf8') : undefined; // unchanged: outside runCommand
     process.exitCode = runCommand(deps, 'step complete', (ctx) => {
-      const bodyContent = o.bodyFile ? readFileSync(o.bodyFile, 'utf8') : undefined;
       let imageBlob = null;
-      let imageCapture = undefined;
       if (o.imageFile) {
         const root = resolveProjectRoot(deps.dir);
         imageBlob = putBlob(root, readFileSync(o.imageFile));
-        imageCapture = o.captureFile ? JSON.parse(readFileSync(o.captureFile, 'utf8')) : undefined;
       }
       return {
         data: step.complete(ctx, {
@@ -727,7 +695,6 @@ stepCmd
           imageBlob,
           imageKind: o.imageKind ?? null,
           imageAlt: o.imageAlt ?? null,
-          imageCapture: imageCapture ?? null,
         }),
       };
     });
@@ -748,121 +715,10 @@ git commit -m "feat(cli): step complete --image-file evidence attachment"
 
 ---
 
-## Task 8: Capture prompt `kind`
+## Task 7: `required_captures` in dispatch payload (reuse `CaptureSpec`)
 
 **Files:**
-- Modify: `src/storage/schema.sql` (`prompt_definitions`), `src/storage/repos.ts` (`prompts.insert`), `src/usecases/prompt.ts` (`PromptView` + create), `src/cli/program.ts` (`prompt create --kind`)
-- Test: `tests/usecases/prompt.test.ts` (append; create if absent)
-
-- [ ] **Step 1: Write the failing test**
-
-```typescript
-// tests/usecases/prompt.test.ts
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { initProject } from '../../src/usecases/init.js';
-import { SqliteStorage } from '../../src/storage/sqlite.js';
-import { fixedClock } from '../../src/domain/clock.js';
-import * as prompt from '../../src/usecases/prompt.js';
-
-const clock = fixedClock('2026-06-04T12:00:00.000Z');
-let dir: string; let storage: SqliteStorage;
-beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'apm-prompt-')); initProject(dir, clock); storage = new SqliteStorage(join(dir, '.apm', 'apm.db'), clock); });
-afterEach(() => { storage.close(); rmSync(dir, { recursive: true, force: true }); });
-
-describe('prompt kind', () => {
-  it('stores and returns kind (default general; capture when set)', () => {
-    const ctx = { storage, clock };
-    const a = prompt.create(ctx, { name: 'plain', body: 'hi' });
-    expect(a.kind).toBe('general');
-    const b = prompt.create(ctx, { name: 'capture-login', body: 'steps...', kind: 'capture' });
-    expect(b.kind).toBe('capture');
-    expect(prompt.show(ctx, 'capture-login').kind).toBe('capture');
-  });
-});
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `npx vitest run tests/usecases/prompt.test.ts`
-Expected: FAIL — `kind` not on `PromptView` / not accepted by create.
-
-- [ ] **Step 3: Implement**
-
-In `src/storage/schema.sql`, change the `prompt_definitions` table to add a `kind` column:
-
-```sql
-CREATE TABLE prompt_definitions (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  version INTEGER NOT NULL,
-  kind TEXT NOT NULL DEFAULT 'general',
-  body TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-```
-
-In `src/storage/repos.ts`, update `prompts.insert` to accept + persist `kind`:
-
-```typescript
-    insert(name: string, body: string, kind: string = 'general'): string {
-      const id = tx.allocateId('PD');
-      const prev = tx.get<{ version: number }>('SELECT MAX(version) version FROM prompt_definitions WHERE name=?', name);
-      const version = (prev?.version ?? 0) + 1;
-      tx.run(
-        'INSERT INTO prompt_definitions (id, name, version, kind, body, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-        id, name, version, kind, body, now,
-      );
-      tx.appendEvent({ eventType: 'prompt.created', entityType: 'prompt_definition', entityId: id, payload: { name, version, kind } });
-      return id;
-    },
-```
-
-In `src/usecases/prompt.ts`, add `kind` to `PromptView`, `CreatePromptArgs`, and map it:
-
-```typescript
-export interface PromptView {
-  id: string; name: string; version: number; kind: string; body: string; created_at: string;
-}
-
-export interface CreatePromptArgs {
-  name: string;
-  body?: string | null;
-  bodyFile?: string | null;
-  kind?: string;
-}
-```
-
-In `create`, pass `a.kind ?? 'general'` to `r.prompts.insert(...)`, and ensure the returned `PromptView` (and `show`/`list` mappers) include `kind: row.kind`. (Mirror the existing row→view mapping in this file; add `kind: row.kind ?? 'general'`.)
-
-In `src/cli/program.ts`, add `--kind` to `prompt create`:
-
-```typescript
-  .option('--kind <k>', 'prompt kind (e.g. capture)', 'general')
-```
-
-and pass `kind: o.kind` into the `prompt.create(ctx, { ... })` call.
-
-- [ ] **Step 4: Run test + full suite**
-
-Run: `npx vitest run tests/usecases/prompt.test.ts && npm test`
-Expected: PASS (prompt tests green; no regression).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/storage/schema.sql src/storage/repos.ts src/usecases/prompt.ts src/cli/program.ts tests/usecases/prompt.test.ts
-git commit -m "feat(prompt): kind column (general default, capture recipes)"
-```
-
----
-
-## Task 9: `CaptureRef` + `required_captures` in dispatch payload
-
-**Files:**
-- Modify: `src/domain/contract.ts` (add `CaptureRef`), `src/usecases/next.ts` (build `required_captures`, add to `data`)
+- Modify: `src/usecases/next.ts` (build `required_captures` from `stepDef.requires.captures`, add to `data`)
 - Test: `tests/usecases/next-captures.test.ts` (create)
 
 - [ ] **Step 1: Write the failing test**
@@ -912,45 +768,27 @@ describe('required_captures in next payload', () => {
     workflow.register(ctx(), YAML);
     const wi = work.create(ctx(), { type: 'feature', title: 'F', agent: 'claude' });
     workflow.attachRun(ctx(), { workItem: wi.id, workflow: 'capwf', agent: 'claude' });
-    const res: any = next.next(ctx(), { agent: 'claude' });
-    expect(res.required_captures).toEqual([
+    const r = next.next(ctx(), { agent: 'claude', capabilities: [], match: 'any' });
+    expect(r.data.required_captures).toEqual([
       { name: 'home-shot', kind: 'screenshot', route: '/home', viewport: { w: 1280, h: 800 }, prompt: 'capture-home' },
     ]);
   });
 });
 ```
 
-> Note: confirm the exact `next` entry point name/signature in `src/usecases/next.ts` (e.g. `next(ctx, { agent })`); adjust the call to match. The assertion target is the `required_captures` field on the dispatched payload.
+> The real `next.next` signature is `next(ctx, { agent, capabilities, match })` and it returns `{ status, data, ... }` — the dispatch payload is under `.data` (cross-check `tests/usecases/next.test.ts`).
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/usecases/next-captures.test.ts`
-Expected: FAIL — `required_captures` undefined.
+Expected: FAIL — `r.data.required_captures` is `undefined`.
 
 - [ ] **Step 3: Implement**
 
-In `src/domain/contract.ts`, add:
+In `src/usecases/next.ts`, after the `requiredContext` loop, build the captures list straight from the step def (no new type — `CaptureSpec[]` is already the right shape):
 
 ```typescript
-export interface CaptureRef {
-  name: string;
-  kind: string;
-  route?: string;
-  viewport?: { w: number; h: number };
-  prompt?: string;
-}
-```
-
-In `src/usecases/next.ts`, after the `requiredContext` loop, build the captures list:
-
-```typescript
-  const requiredCaptures = (stepDef.requires?.captures ?? []).map((c) => ({
-    name: c.name,
-    kind: c.kind,
-    ...(c.route != null ? { route: c.route } : {}),
-    ...(c.viewport != null ? { viewport: c.viewport } : {}),
-    ...(c.prompt != null ? { prompt: c.prompt } : {}),
-  }));
+  const requiredCaptures = stepDef.requires?.captures ?? [];
 ```
 
 Add it to the `data` payload object (alongside `required_context`):
@@ -967,16 +805,16 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/domain/contract.ts src/usecases/next.ts tests/usecases/next-captures.test.ts
+git add src/usecases/next.ts tests/usecases/next-captures.test.ts
 git commit -m "feat(next): required_captures in dispatch payload"
 ```
 
 ---
 
-## Task 10: `REQUIRED_CAPTURES:` block in agent format
+## Task 8: `REQUIRED_CAPTURES:` block in agent format
 
 **Files:**
-- Modify: `src/format/render.ts` (`renderAgent`, after the `REQUIRED_CONTEXT` block)
+- Modify: `src/format/render.ts` (`renderAgent`, after the `REQUIRED_CONTEXT` block, before `DO_NOT`)
 - Test: `tests/format/render-captures.test.ts` (create)
 
 - [ ] **Step 1: Write the failing test**
@@ -1050,7 +888,7 @@ git commit -m "feat(format): REQUIRED_CAPTURES block in agent contract"
 
 ---
 
-## Task 11: `image add --blocker` + `imagesByBlocker`
+## Task 9: `image add --blocker` + `imagesByBlocker`
 
 **Files:**
 - Modify: `src/usecases/image.ts` (`AddArgs.blocker`, metadata + event + default relation in `addImageTx`), `src/storage/repos.ts` (`imagesByBlocker`), `src/cli/program.ts` (`image add --blocker`)
@@ -1065,20 +903,18 @@ describe('bug capture (--blocker)', () => {
   it('links a bug screenshot to a blocker, discoverable via imagesByBlocker', () => {
     const ctx = { storage, clock };
     const wi = work.create(ctx, { type: 'feature', title: 'B', agent: 'agent:claude' });
-    // create a blocker on the work item
-    const blkId = storage.transaction('immediate', (tx) => {
-      const r = repos(tx);
-      return r.blockers.insert({ workItem: wi.id, type: 'bug', reason: 'broken', createdBy: 'agent:claude' });
-    });
+    const blkId = storage.transaction('immediate', (tx) =>
+      repos(tx).blockers.insert({ workItemId: wi.id, type: 'bug', reason: 'broken' }),
+    );
     const v = image.add(ctx, { workItem: wi.id, kind: 'bug', alt: 'broken', blocker: blkId, agent: 'agent:claude', blob: putBlob(dir, PNG) });
     expect(v.kind).toBe('bug');
     const found = storage.transaction('deferred', (tx) => repos(tx).artifacts.imagesByBlocker(blkId));
-    expect(found.map((r: any) => r.id)).toContain(v.id);
+    expect(found.map((row: any) => row.id)).toContain(v.id);
   });
 });
 ```
 
-> Note: confirm `r.blockers.insert(...)` arg shape against `src/storage/repos.ts` (mirror how `blocker.create` calls it). If the repo signature differs, adapt the seeding line — the assertion (imagesByBlocker finds the image) is the point.
+> `blockers.insert` takes `{ workItemId, type, reason }` (no `workItem`/`createdBy`) — cross-check `src/storage/repos.ts`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1102,7 +938,7 @@ export interface AddArgs {
 }
 ```
 
-In `addImageTx`, default the relation to `'bug'` when a blocker is supplied, store the blocker in metadata, and include it in the event payload. Change the relation line and metadata/event:
+In `addImageTx`, default the relation to `'bug'` when a blocker is supplied, store the blocker in metadata, and include it in the event payload. Change the relation line:
 
 ```typescript
   const relation = a.relation ?? (a.blocker ? 'bug' : 'evidence');
@@ -1114,13 +950,13 @@ In the `metadata` object add:
     blocker: a.blocker ?? null,
 ```
 
-In the `image.linked` event payload add the blocker:
+In the `image.linked` event payload:
 
 ```typescript
     payload: { work_item: a.workItem, relation, ...(a.blocker ? { blocker: a.blocker } : {}) },
 ```
 
-In `src/storage/repos.ts`, add to the `artifacts:` object:
+In `src/storage/repos.ts`, add to the `artifacts:` object (mirroring `imagesByBlob`):
 
 ```typescript
       imagesByBlocker(blockerId: string): any[] {
@@ -1153,7 +989,7 @@ git commit -m "feat(image): --blocker bug-capture + imagesByBlocker query"
 
 ---
 
-## Task 12: Surface bug images in `apm blocker show`
+## Task 10: Surface bug images in `apm blocker show`
 
 **Files:**
 - Modify: `src/usecases/blocker.ts` (`show` returns blocker + `images`)
@@ -1193,7 +1029,7 @@ describe('blocker show surfaces bug images', () => {
 });
 ```
 
-> Note: confirm `blocker.create` arg/return shape in `src/usecases/blocker.ts`; adapt the seeding line to match its real signature.
+> `blocker.create(ctx, { workItem, type, reason, agent })` matches `CreateBlockerArgs` — cross-check `src/usecases/blocker.ts`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1202,7 +1038,7 @@ Expected: FAIL — `shown.images` undefined.
 
 - [ ] **Step 3: Implement**
 
-In `src/usecases/blocker.ts`, import the image view + repos and extend `show` to attach images:
+In `src/usecases/blocker.ts`, import the image view + extend `show`:
 
 ```typescript
 import { toImageView, type ImageView } from '../domain/entities.js';
@@ -1222,7 +1058,7 @@ export function show(ctx: Ctx, id: string): BlockerView & { images: ImageView[] 
 }
 ```
 
-(`repos`/`ApmError`/`toBlockerView` are already imported in this file. The CLI `blocker show` already calls `blocker.show`, so the `images` field flows into its JSON/human output automatically.)
+(`repos`/`ApmError`/`toBlockerView` are already imported in this file. `BlockerView & { images }` is assignable to `BlockerView`, so existing consumers are unaffected. The CLI `blocker show` already calls `blocker.show`, so `images` flows into its output automatically.)
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -1238,7 +1074,7 @@ git commit -m "feat(blocker): surface linked bug images in blocker show"
 
 ---
 
-## Task 13: Docs
+## Task 11: Docs
 
 **Files:**
 - Modify: `CLAUDE.md`
@@ -1248,39 +1084,38 @@ git commit -m "feat(blocker): surface linked bug images in blocker show"
 In `CLAUDE.md`, on the `Steps:` line, append the image flag:
 
 ```
-· `step complete <run> <step> --image-file <f> [--image-kind screenshot] [--image-alt <s>] [--capture-file <f>] --agent <a>` (attach evidence screenshot; satisfies capture gates)
+· `step complete <run> <step> --image-file <f> [--image-kind screenshot] [--image-alt <s>] --agent <a>` (attach evidence screenshot; satisfies capture gates)
 ```
 
-On the `Images:` line, append `[--blocker <id>]` to the `image add` usage. On the `Prompts:` line, append `[--kind capture]` to `prompt create`.
+On the `Images:` line, append `[--blocker <id>]` to the `image add` usage.
 
 Add a one-line note near the Workflows section:
 
 ```
-- Capture gates: a step may declare `requires.captures: [{ name, kind, route?, viewport?, prompt? }]`; completion is blocked until a linked `evidence` image matches each (matched on image `metadata.kind` + route/viewport). Surfaced to agents as `REQUIRED_CAPTURES:` in `apm next --format agent`.
+- Capture gates: a step may declare `requires.captures: [{ name, kind, route?, viewport?, prompt? }]`; completion is blocked until a linked `evidence` image matches each (matched on image `metadata.kind` + route/viewport). Surfaced to agents as `REQUIRED_CAPTURES:` in `apm next --format agent`. A capture's `prompt:` names an existing prompt (the capture recipe), surfaced as `recipe=<name>`.
 ```
 
 - [ ] **Step 2: Commit**
 
 ```bash
 git add CLAUDE.md
-git commit -m "docs: capture gates, step --image-file, image --blocker, prompt --kind"
+git commit -m "docs: capture gates, step --image-file, image --blocker"
 ```
 
 ---
 
-## Task 14: Final verification
+## Task 12: Final verification
 
 - [ ] **Step 1: Full suite + typecheck + build**
 
 Run: `npm test && npm run typecheck && npm run build`
-Expected: all PASS; `dist/` emits; `schema.sql` (with `prompt_definitions.kind`) copied to `dist/storage/`.
+Expected: all PASS; `dist/` emits.
 
 - [ ] **Step 2: Manual smoke (real binary)**
 
 ```bash
 TMP=$(mktemp -d)
 npx tsx src/bin/apm.ts --dir "$TMP" init
-# register a capture-gated workflow
 cat > "$TMP/wf.yaml" <<'YAML'
 id: capwf
 version: 1
@@ -1299,34 +1134,35 @@ steps:
     type: terminal
 YAML
 npx tsx src/bin/apm.ts --dir "$TMP" workflow register --file "$TMP/wf.yaml"
-WI=WI-1; npx tsx src/bin/apm.ts --dir "$TMP" work create --type feature --title Cap --agent claude >/dev/null
-RUN=$(npx tsx src/bin/apm.ts --dir "$TMP" workflow attach WI-1 --workflow capwf --agent claude -o json | npx --yes node-jq -r .data.id 2>/dev/null || echo WR-1)
+npx tsx src/bin/apm.ts --dir "$TMP" work create --type feature --title Cap --agent claude
+npx tsx src/bin/apm.ts --dir "$TMP" workflow attach WI-1 --workflow capwf --agent claude
 # agent contract should show REQUIRED_CAPTURES
 npx tsx src/bin/apm.ts --dir "$TMP" next --agent claude --format agent
-# completing without a shot should FAIL the gate
+# completing without a shot should FAIL the gate (ok:false, E_PRECONDITION)
 npx tsx src/bin/apm.ts --dir "$TMP" step complete WR-1 shoot --agent claude -o json
 # attach a screenshot -> gate satisfied
 printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' | base64 -d > "$TMP/s.png"
 npx tsx src/bin/apm.ts --dir "$TMP" step complete WR-1 shoot --image-file "$TMP/s.png" --image-kind screenshot --image-alt home --agent claude
 rm -rf "$TMP"
 ```
-Expected: `next --format agent` prints a `REQUIRED_CAPTURES:` block with `home-shot kind=screenshot`; the first `step complete` returns `ok:false` `E_PRECONDITION` (`missing required captures: home-shot`); the `--image-file` completion returns `ok:true`.
+Expected: `next --format agent` prints a `REQUIRED_CAPTURES:` block with `home-shot  kind=screenshot`; the first `step complete` returns `ok:false` `E_PRECONDITION` (`missing required captures: home-shot`); the `--image-file` completion returns `ok:true`.
 
 - [ ] **Step 3: Commit any fixes, then stop for review.**
 
 ---
 
-## Self-Review (author checklist — completed)
+## Self-Review (author checklist — completed; round-1 adversarial fixes folded in)
 
 **Spec coverage (Plan-2 scope):**
-- §6 verification-run binding / K2 (one step, many shots via embed) → Tasks 5–7 (`addImageTx`, `step.complete` evidence doc, CLI `--image-file`).
-- §5 required-capture spec on steps + gate (K4 match on `metadata.kind`) → Tasks 1–4 (`CaptureSpec`, `unmetCaptures`, `linkedImagesByRelation`, gate in `completeMainStep`).
-- §5 capture prompt templates (reuse `prompt` entity, `capture` kind) → Task 8.
-- §5 `REQUIRED_CAPTURES` surfacing (pulled into Plan 2 per scope decision) → Tasks 9–10.
-- §6 blocker/bug capture (`image.linked` carries blocker id; `blocker show` surfaces) → Tasks 11–12.
-- Docs → Task 13. Verification → Task 14.
-- Deferred & labeled: `produces.captures` (no consumer — omitted), perceptual diff, viewer, `--clipboard` ingestion → later plans.
+- §6 verification-run binding / K2 (one step, many shots via embed) → Tasks 4–6 (`addImageTx`, `step.complete` evidence doc, CLI `--image-file`).
+- §5 required-capture spec on steps + gate (K4 match on `metadata.kind`) → Tasks 1–3 (`CaptureSpec`, `unmetCaptures`, gate + `linkedImagesByRelation`).
+- §5 capture prompt templates (reuse `prompt` entity) → no code (existing `prompt` entity; recipe referenced by name in a capture spec, surfaced as `recipe=`). Prompt `kind` cut as speculative.
+- §5 `REQUIRED_CAPTURES` surfacing (pulled into Plan 2) → Tasks 7–8 (payload reuses `CaptureSpec`; render block).
+- §6 blocker/bug capture → Tasks 9–10 (`--blocker`, `imagesByBlocker`, `blocker.show`).
+- Docs → Task 11. Verification → Task 12.
 
-**Placeholder scan:** none. Three tasks (9, 11, 12) carry an explicit "confirm the real signature of X" note where they call a pre-existing function (`next` entry point, `blockers.insert`, `blocker.create`) — these are verification instructions, not placeholders; the implementation code itself is complete.
+**Round-1 adversarial fixes applied:** Task 7 test uses the real `next.next(ctx, {agent, capabilities:[], match:'any'})` signature and asserts `r.data.required_captures`. Task 9 test seeds `blockers.insert({ workItemId, type, reason })`. Task 6 keeps the `--body-file` read outside `runCommand` (no behavior drift). Cut: prompt `kind`, `CaptureRef`, `--capture-file` on `step complete`. Merged the relation query into the gate task. No schema migration remains.
 
-**Type consistency:** `CaptureSpec` (workflow.ts) flows into `unmetCaptures` (captures.ts), the gate (advance.ts), and is mapped to `CaptureRef` (contract.ts) for the payload + render. `AddArgs` gains `blocker?` once (Task 11) and is consumed by `addImageTx` (Task 5) + `step.complete` (Task 6). `addImageTx(tx, AddArgs): ImageView` signature is identical across image.ts and step.ts callers. `CompleteArgs` image fields (`imageBlob`/`imageKind`/`imageAlt`/`imageCapture`) match between usecase (Task 6) and CLI (Task 7). `prompts.insert(name, body, kind?)` matches `prompt.create` (Task 8). `imagesByBlocker` shared by Tasks 11 (define) and 12 (consume).
+**Placeholder scan:** none. Three tasks (7, 9, 10) carry a "cross-check the real signature" note next to calls into pre-existing functions — verification reminders, not placeholders; the code is complete.
+
+**Type consistency:** `CaptureSpec` (workflow.ts) flows into `unmetCaptures` (captures.ts), the gate (advance.ts), the payload (`next.ts` pushes `CaptureSpec[]` directly), and render (reads `name/kind/route/viewport/prompt`). `AddArgs` gains `blocker?` once (Task 9), consumed by `addImageTx`. `addImageTx(tx: Tx, a: AddArgs): ImageView` identical across image.ts and step.ts callers. `CompleteArgs` image fields (`imageBlob`/`imageKind`/`imageAlt`) match between usecase (Task 5) and CLI (Task 6). `imagesByBlocker` defined (Task 9) + consumed (Task 10).
