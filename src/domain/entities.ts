@@ -54,12 +54,12 @@ export function toSessionView(row: any): SessionView {
 }
 
 export interface LeaseView {
-  id: string; work_item: string; agent: string; session: string | null;
+  id: string; work_item: string | null; agent: string; session: string | null;
   status: LeaseStatus; acquired_at: string; expires_at: string; heartbeat_at: string | null;
 }
 export function toLeaseView(row: any): LeaseView {
   return {
-    id: row.id, work_item: row.work_item_id, agent: row.agent_id, session: row.session_id ?? null,
+    id: row.id, work_item: row.work_item_id ?? null, agent: row.agent_id, session: row.session_id ?? null,
     status: row.status, acquired_at: row.acquired_at, expires_at: row.expires_at, heartbeat_at: row.heartbeat_at ?? null,
   };
 }
