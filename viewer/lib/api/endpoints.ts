@@ -3,7 +3,7 @@ import {
   envelopeSchema, pageSchema,
   StatusViewSchema, WorkItemViewSchema, RunViewSchema, StepRunViewSchema,
   ArtifactViewSchema, DecisionViewSchema, WorkBlockersSchema, EnrichedBlockerViewSchema,
-  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, EventViewSchema, SessionViewSchema, ProjectViewSchema,
+  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, EventViewSchema, SessionViewSchema, ProjectViewSchema, SearchResultViewSchema,
 } from '@apm/types';
 
 const qs = (params: Record<string, string | number | undefined>): string => {
@@ -37,6 +37,7 @@ export const ep = {
   events: { path: (f: EventsFilter = {}) => `/api/events${qs({ 'entity-type': f.entityType, 'entity-id': f.entityId, limit: f.limit, offset: f.offset })}`, schema: pageSchema(EventViewSchema) },
   sessions: { path: () => '/api/sessions', schema: z.array(SessionViewSchema) },
   projects: { path: () => '/api/projects', schema: z.array(ProjectViewSchema) },
+  search: { path: (q: string, limit?: number) => `/api/search${qs({ q, limit })}`, schema: z.array(SearchResultViewSchema) },
 } as const;
 
 export interface EventsFilter { entityType?: string; entityId?: string; limit?: number; offset?: number; }
