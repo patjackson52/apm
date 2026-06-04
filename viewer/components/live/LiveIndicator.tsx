@@ -15,7 +15,7 @@ export function LiveIndicator() {
   const { state, lastUpdatedAt, isFetching } = useLiveStatus();
   const ago = agoText(lastUpdatedAt);
   return (
-    <span className={s.indicator} aria-live="polite">
+    <span className={s.indicator} role="status" aria-live="polite">
       <span
         className={`${s.dot} ${s[`d_${state}`]} ${isFetching ? s.pulse : ''}`}
         aria-label={`${LABEL[state]}${ago ? ` — ${ago}` : ''}`}

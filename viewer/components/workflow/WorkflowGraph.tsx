@@ -52,6 +52,7 @@ export function WorkflowGraph({
         nodeTypes={nodeTypes}
         nodesDraggable={false}
         nodesConnectable={false}
+        nodesFocusable
         elementsSelectable
         fitView
         proOptions={{ hideAttribution: true }}
