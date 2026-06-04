@@ -297,16 +297,29 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     .option('--artifact <id>', 'artifact id')
     .option('--artifact-type <t>', 'artifact type (creates artifact from --body-file)')
     .option('--body-file <f>', 'path to artifact body file')
-    .action(function (this: Command, runId: string, stepId: string, o: { agent: string; artifact?: string; artifactType?: string; bodyFile?: string }) {
+    .option('--image-file <path>', 'attach an evidence screenshot (creates IMG + embeds in output doc)')
+    .option('--image-kind <k>', 'image kind', 'screenshot')
+    .option('--image-alt <s>', 'image alt text')
+    .action(function (this: Command, runId: string, stepId: string, o: { agent: string; artifact?: string; artifactType?: string; bodyFile?: string; imageFile?: string; imageKind: string; imageAlt?: string }) {
       const bodyContent = o.bodyFile ? readFileSync(o.bodyFile, 'utf8') : undefined;
-      process.exitCode = runCommand(buildDeps(), 'step complete', (ctx) => ({
-        data: step.complete(ctx, {
-          run: runId, step: stepId, agent: o.agent,
-          artifactId: o.artifact ?? null,
-          artifactType: o.artifactType ?? null,
-          bodyFile: bodyContent ?? null,
-        }),
-      }));
+      process.exitCode = runCommand(buildDeps(), 'step complete', (ctx) => {
+        let imageBlob = null;
+        if (o.imageFile) {
+          const root = resolveProjectRoot(buildDeps().dir);
+          imageBlob = putBlob(root, readFileSync(o.imageFile));
+        }
+        return {
+          data: step.complete(ctx, {
+            run: runId, step: stepId, agent: o.agent,
+            artifactId: o.artifact ?? null,
+            artifactType: o.artifactType ?? null,
+            bodyFile: bodyContent ?? null,
+            imageBlob,
+            imageKind: o.imageKind ?? null,
+            imageAlt: o.imageAlt ?? null,
+          }),
+        };
+      });
     });
 
   stepCmd
