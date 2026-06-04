@@ -86,6 +86,8 @@ export interface ArtifactView {
   // null on lean reads (e.g. list, which omits the body column).
   body: string | null;
   work_item: string | null;
+  // Parsed from metadata_json. null when absent. Holds image/capture records for type='image'.
+  metadata: Record<string, unknown> | null;
 }
 /** Dumb mapper: body comes straight off the row (null if absent); work_item is supplied by the caller. */
 export function toArtifactView(row: any, workItem: string | null = null): ArtifactView {
@@ -94,6 +96,7 @@ export function toArtifactView(row: any, workItem: string | null = null): Artifa
     root: row.root_artifact_id, supersedes: row.supersedes_artifact_id ?? null,
     created_by: row.created_by ?? null, created_at: row.created_at,
     body: row.body ?? null, work_item: workItem,
+    metadata: row.metadata_json != null ? JSON.parse(row.metadata_json) : null,
   };
 }
 
