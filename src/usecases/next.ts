@@ -222,16 +222,6 @@ const idle = (reason: string, retryAfter: number, session?: string): NextResult 
   status: 'idle', reason, data: { status: 'idle', reason, retry_after: retryAfter }, session,
 });
 
-/**
- * Number of concurrent dispatch slots the fleet allows. Read in a deferred tx
- * from the GLOBAL effective policy: when parallel_work_enabled is false the
- * fleet is forced to a single slot, otherwise max_parallel_agents (default 4).
- */
-function effectiveSlotCount(ctx: Ctx): number {
-  const pol = ctx.storage.transaction('deferred', (tx) => globalFleetPolicy(tx));
-  return pol.parallel_work_enabled === false ? 1 : (pol.max_parallel_agents ?? 4);
-}
-
 export function next(ctx: Ctx, args: NextArgs): NextResult {
   // Resolve session outside any read/walk tx (start() uses its own immediate txn).
   let session: string | undefined;
@@ -280,8 +270,9 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
   // wasted if the work-item walk below finds everything taken — that is
   // acceptable (it expires / gets reused; the runner owns slot release).
   const secs = parseTtlSeconds(args.ttl ?? '30m');
-  const slots = effectiveSlotCount(ctx);
   const slotOk = ctx.storage.transaction('immediate', (tx) => {
+    const pol = globalFleetPolicy(tx);
+    const slots = pol.parallel_work_enabled === false ? 1 : (pol.max_parallel_agents ?? 4);
     const now = tx.now();
     // Reuse a slot this agent already holds (idempotent across repeated next calls).
     const mine = tx.get(

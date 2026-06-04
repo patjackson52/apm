@@ -76,7 +76,7 @@ export function effectivePolicy(tx: Tx, workItemId: string): Record<string, unkn
 
   // 2. global policy
   const globalRow = r.policies.global();
-  const globalPolicy: Record<string, unknown> = globalRow
+  const globalPolicyData: Record<string, unknown> = globalRow
     ? JSON.parse(globalRow.policy_json)
     : {};
 
@@ -87,5 +87,5 @@ export function effectivePolicy(tx: Tx, workItemId: string): Record<string, unkn
     : {};
 
   // Deep merge: def < global < work_item (shallow merge per top-level key is sufficient for V1)
-  return { ...defPolicy, ...globalPolicy, ...wiPolicy };
+  return { ...defPolicy, ...globalPolicyData, ...wiPolicy };
 }
