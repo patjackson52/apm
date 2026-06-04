@@ -52,6 +52,18 @@ describe('toArtifactView metadata', () => {
   });
 });
 
+describe('toImageView (null metadata)', () => {
+  it('toImageView tolerates a row with null metadata_json (empty path, no throw)', () => {
+    const row = {
+      id: 'IMG-9', type: 'image', title: 't', version: 1, status: 'draft',
+      root_artifact_id: 'IMG-9', supersedes_artifact_id: null, created_by: 'a',
+      created_at: '2026-06-04T00:00:00.000Z', body: null, metadata_json: null,
+    };
+    const v = toImageView(row, null);
+    expect(v.path).toBe('');
+  });
+});
+
 describe('toImageView', () => {
   it('maps an image artifact row + metadata to an ImageView with a blob path', () => {
     const row = {

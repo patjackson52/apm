@@ -83,6 +83,17 @@ describe('image.add', () => {
     });
   });
 
+  it('appends an image.linked event with work_item + relation', () => {
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'L', agent: 'agent:claude' });
+    const v = image.add(ctx, { workItem: wi.id, kind: 'screenshot', alt: 'x', relation: 'reference', agent: 'agent:claude', blob: putBlob(dir, PNG) });
+    storage.transaction('deferred', (tx) => {
+      const ev: any = tx.get("SELECT payload_json FROM events WHERE event_type='image.linked' AND entity_id=?", v.id);
+      expect(ev).toBeTruthy();
+      expect(JSON.parse(ev.payload_json)).toMatchObject({ work_item: wi.id, relation: 'reference' });
+    });
+  });
+
   it('rejects an oversize blob', () => {
     const ctx = { storage, clock };
     const wi = work.create(ctx, { type: 'feature', title: 'F2', agent: 'agent:claude' });

@@ -230,7 +230,7 @@ export function toImageView(row: any, workItem: string | null = null): ImageView
     byte_size: m.byte_size ?? 0,
     alt: m.alt ?? null,
     capture: m.capture ?? null,
-    path: blobRelPath(m.blob, m.ext),
+    path: m.blob ? blobRelPath(m.blob, m.ext) : '',
     created_by: row.created_by ?? null,
     created_at: row.created_at,
     work_item: workItem,
