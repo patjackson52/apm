@@ -25,3 +25,10 @@ describe('ids', () => {
     expect(artifactRef('ART-1', 2)).toBe('ART-1@2');
   });
 });
+
+describe('IMG prefix', () => {
+  it('is registered and formats', () => {
+    expect(ID_PREFIXES.image).toBe('IMG');
+    expect(formatId(ID_PREFIXES.image, 7)).toBe('IMG-7');
+  });
+});
