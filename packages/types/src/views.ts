@@ -51,6 +51,14 @@ export const EventViewSchema = z.object({
   created_at: z.string(),
 }).strict();
 
+export const SearchResultViewSchema = z.object({
+  kind: z.enum(['work_item', 'artifact', 'run', 'step']),
+  id: z.string(),
+  title: z.string(),
+  snippet: z.string().nullable(),
+  work_item: z.string().nullable(),
+}).strict();
+
 export const ProjectViewSchema = z.object({
   id: z.string(),
   name: z.string(),

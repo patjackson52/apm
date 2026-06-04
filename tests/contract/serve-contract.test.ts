@@ -18,7 +18,7 @@ import {
   envelopeSchema, pageSchema,
   WorkItemViewSchema, RunViewSchema, StepRunViewSchema, ArtifactViewSchema,
   DecisionViewSchema, BlockerViewSchema, EnrichedBlockerViewSchema, WorkBlockersSchema,
-  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, StatusViewSchema, EventViewSchema, SessionViewSchema, ProjectViewSchema,
+  LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, StatusViewSchema, EventViewSchema, SessionViewSchema, ProjectViewSchema, SearchResultViewSchema,
 } from '@apm/types';
 
 const clock = fixedClock('2026-06-03T12:00:00.000Z');
@@ -74,6 +74,19 @@ describe('apm serve ↔ @apm/types contract', () => {
   it('/api/events (page)', () => check('/api/events', pageSchema(EventViewSchema)));
   it('/api/sessions (array)', () => check('/api/sessions', z.array(SessionViewSchema)));
   it('/api/projects (array)', () => check('/api/projects', z.array(ProjectViewSchema)));
+  it('/api/search (array) finds the seeded work item', async () => {
+    const res = await (await fetch(base + '/api/search?q=F')).json();
+    expect(z.array(SearchResultViewSchema).safeParse(res.data).success).toBe(true);
+    expect(res.data.some((r: any) => r.kind === 'work_item')).toBe(true);
+  });
+  it('/api/search blank q -> [] ; SQL wildcards/injection escaped (no match-all, no 500)', async () => {
+    expect((await (await fetch(base + '/api/search?q=')).json()).data).toEqual([]);
+    const pct = await (await fetch(base + '/api/search?q=%25')).json(); // q='%'
+    const inj = await (await fetch(base + "/api/search?q=' OR 1=1 --")).json();
+    expect(pct.ok).toBe(true); expect(inj.ok).toBe(true);
+    expect(Array.isArray(pct.data)).toBe(true); expect(Array.isArray(inj.data)).toBe(true);
+    expect(pct.data.length).toBe(0); // '%' is escaped -> literal, matches nothing
+  });
   it('?project=bogus / ../etc -> default project data (switch-by-id, no path injection)', async () => {
     const def = await (await fetch(base + '/api/work')).json();
     const bogus = await (await fetch(base + '/api/work?project=bogus')).json();
