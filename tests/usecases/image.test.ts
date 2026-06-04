@@ -54,3 +54,39 @@ describe('blobs repo + image queries', () => {
     });
   });
 });
+
+import * as image from '../../src/usecases/image.js';
+import * as work from '../../src/usecases/work.js';
+
+describe('image.add', () => {
+  it('ingests a blob, creates an IMG artifact, links to the work item', () => {
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'F', agent: 'agent:claude' });
+    const meta = putBlob(dir, PNG);
+    const v = image.add(ctx, {
+      workItem: wi.id, kind: 'screenshot', alt: 'home', relation: 'evidence',
+      agent: 'agent:claude', blob: meta,
+    });
+    expect(v.id).toBe('IMG-1');
+    expect(v.kind).toBe('screenshot');
+    expect(v.blob).toBe(meta.sha256);
+    expect(v.work_item).toBe(wi.id);
+
+    // linked + listable
+    const list = image.list(ctx, { workItem: wi.id });
+    expect(list.items.map((i) => i.id)).toContain('IMG-1');
+
+    // image.created event present
+    storage.transaction('deferred', (tx) => {
+      const ev: any = tx.get("SELECT event_type FROM events WHERE entity_id='IMG-1' AND event_type='image.created'");
+      expect(ev).toBeTruthy();
+    });
+  });
+
+  it('rejects an oversize blob', () => {
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'F2', agent: 'agent:claude' });
+    const meta = { ...putBlob(dir, PNG), byte_size: 999_999_999 };
+    expect(() => image.add(ctx, { workItem: wi.id, kind: 'screenshot', agent: 'agent:claude', blob: meta })).toThrow(/too large/);
+  });
+});
