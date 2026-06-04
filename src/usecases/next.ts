@@ -224,8 +224,8 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
         : null;
       try {
         tx.run(
-          "INSERT INTO leases (id, work_item_id, agent_id, session_id, status, acquired_at, expires_at, heartbeat_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?)",
-          leaseId, workItemId, args.agent, sessionIdForLease, now, addSeconds(now, secs), now,
+          "INSERT INTO leases (id, resource_type, resource_key, work_item_id, agent_id, session_id, status, acquired_at, expires_at, heartbeat_at) VALUES (?, 'work_item', ?, ?, ?, ?, 'active', ?, ?, ?)",
+          leaseId, workItemId, workItemId, args.agent, sessionIdForLease, now, addSeconds(now, secs), now,
         );
       } catch (e: any) {
         if (

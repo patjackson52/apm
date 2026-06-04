@@ -28,8 +28,8 @@ export function acquire(ctx: Ctx, a: AcquireArgs): LeaseView {
     const id = tx.allocateId('LEASE');
     try {
       tx.run(
-        "INSERT INTO leases (id, work_item_id, agent_id, session_id, status, acquired_at, expires_at, heartbeat_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?)",
-        id, a.workItem, a.agent, a.session ?? null, tx.now(), addSeconds(tx.now(), secs), tx.now(),
+        "INSERT INTO leases (id, resource_type, resource_key, work_item_id, agent_id, session_id, status, acquired_at, expires_at, heartbeat_at) VALUES (?, 'work_item', ?, ?, ?, ?, 'active', ?, ?, ?)",
+        id, a.workItem, a.workItem, a.agent, a.session ?? null, tx.now(), addSeconds(tx.now(), secs), tx.now(),
       );
     } catch (e: any) {
       // better-sqlite3 throws SqliteError with code SQLITE_CONSTRAINT_UNIQUE for partial-unique index violations
