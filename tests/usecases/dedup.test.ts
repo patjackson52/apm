@@ -33,4 +33,16 @@ describe('dedup on create', () => {
     const ok = work.create(ctx(), { type: 'task', title: 'Add OAuth', parent: p2.id, agent: 'x' });
     expect(ok.id).toBeTruthy();
   });
+  it('refuses a duplicate-titled root item (no parent) without force', () => {
+    work.create(ctx(), { type: 'feature', title: 'Build Viewer', agent: 'x' });
+    expect(() => work.create(ctx(), { type: 'feature', title: 'build  viewer', agent: 'x' }))
+      .toThrowError(/E_DUPLICATE|duplicate/i);
+  });
+  it('allows re-creating a sibling whose duplicate was cancelled', () => {
+    const parent = work.create(ctx(), { type: 'feature', title: 'P', agent: 'x' });
+    const first = work.create(ctx(), { type: 'task', title: 'Add OAuth', parent: parent.id, agent: 'x' });
+    work.cancel(ctx(), first.id, 'x');
+    const again = work.create(ctx(), { type: 'task', title: 'Add OAuth', parent: parent.id, agent: 'x' });
+    expect(again.id).toBeTruthy();
+  });
 });
