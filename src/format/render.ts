@@ -87,7 +87,13 @@ function renderAgent(envelope: Envelope<any>): string {
       lines.push('');
       lines.push('REQUIRED_CONTEXT:');
       for (const ctx of d.required_context) {
-        lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" — ${ctx.one_line}`);
+        if (ctx.path) {
+          lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" [image]`);
+          lines.push(`  path: ${ctx.path}`);
+          if (ctx.alt) lines.push(`  alt:  ${ctx.alt}`);
+        } else {
+          lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" — ${ctx.one_line}`);
+        }
       }
     }
 
