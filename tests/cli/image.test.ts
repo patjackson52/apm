@@ -51,3 +51,26 @@ describe('apm image CLI', () => {
     expect(listed.data.items.map((i: any) => i.id)).toContain('IMG-1');
   });
 });
+
+import { readFileSync as rf, existsSync } from 'node:fs';
+
+describe('apm image save + embed', () => {
+  it('saves blob bytes to a path and emits embed snippets', () => {
+    const storage = new SqliteStorage(join(dir, '.apm', 'apm.db'), clock);
+    const wi = work.create({ storage, clock }, { type: 'feature', title: 'F', agent: 'agent:claude' });
+    storage.close();
+    const png = join(dir, 's.png');
+    writeFileSync(png, PNG);
+    runCli(['image', 'add', '--work-item', wi.id, '--file', png, '--alt', 'home', '--agent', 'agent:claude']);
+
+    const dest = join(dir, 'out.png');
+    runCli(['image', 'save', 'IMG-1', '--to', dest]);
+    expect(existsSync(dest)).toBe(true);
+    expect(rf(dest).equals(PNG)).toBe(true);
+
+    const embed = JSON.parse(runCli(['image', 'embed', 'IMG-1']).out);
+    expect(embed.data.markdown).toBe('![home](apm:IMG-1)');
+    const resolved = JSON.parse(runCli(['image', 'embed', 'IMG-1', '--resolve']).out);
+    expect(resolved.data.markdown).toMatch(/^!\[home\]\(\.apm\/blobs\//);
+  });
+});
