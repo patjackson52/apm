@@ -1,0 +1,6 @@
+.wrap { display: grid; gap: 16px; }
+.section h2 { font-size: 13px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 8px; }
+.row { display: flex; gap: 8px; align-items: baseline; font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.type { font-weight: 600; }
+.muted { color: var(--fg-muted); }
+.empty { color: var(--fg-muted); font-size: 13px; }

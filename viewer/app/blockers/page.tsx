@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/Skeleton';
+import { BlockersGates } from '@/components/blockers/BlockersGates';
 export default function Page() {
-  return <><h1>Blockers & Gates</h1><Skeleton count={3} /><p>screen: WI-35</p></>;
+  return <><h1>Blockers &amp; Gates</h1><BlockersGates /></>;
 }

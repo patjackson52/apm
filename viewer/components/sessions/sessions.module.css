@@ -1,0 +1,6 @@
+.list { display: grid; gap: 12px; }
+.card { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; }
+.head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.status { font-size: 12px; padding: 2px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.muted { color: var(--fg-muted); font-size: 12px; }
+.empty { color: var(--fg-muted); font-size: 13px; }
