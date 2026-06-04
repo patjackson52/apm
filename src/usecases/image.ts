@@ -17,6 +17,7 @@ export interface AddArgs {
   alt?: string;
   capture?: Record<string, unknown>;
   relation?: string;
+  blocker?: string;
   agent: string;
   blob: BlobMeta;
 }
@@ -26,7 +27,7 @@ export function addImageTx(tx: Tx, a: AddArgs): ImageView {
   if (!IMAGE_KINDS.includes(a.kind as any)) {
     throw new ApmError('E_VALIDATION', `invalid kind`, [{ field: 'kind', problem: `must be one of ${IMAGE_KINDS.join('|')}`, got: a.kind }]);
   }
-  const relation = a.relation ?? 'evidence';
+  const relation = a.relation ?? (a.blocker ? 'bug' : 'evidence');
   if (!RELATIONS.includes(relation as any)) {
     throw new ApmError('E_VALIDATION', `invalid relation`, [{ field: 'relation', problem: `must be one of ${RELATIONS.join('|')}`, got: relation }]);
   }
@@ -47,6 +48,7 @@ export function addImageTx(tx: Tx, a: AddArgs): ImageView {
     byte_size: a.blob.byte_size,
     alt: a.alt ?? null,
     capture: a.capture ?? null,
+    blocker: a.blocker ?? null,
   };
   const id = r.artifacts.insert(
     { type: 'image', title: a.alt ?? a.kind, body: a.alt ?? null, createdBy: a.agent, version: 1, metadata },
@@ -58,7 +60,7 @@ export function addImageTx(tx: Tx, a: AddArgs): ImageView {
     eventType: 'image.linked',
     entityType: 'artifact',
     entityId: id,
-    payload: { work_item: a.workItem, relation },
+    payload: { work_item: a.workItem, relation, ...(a.blocker ? { blocker: a.blocker } : {}) },
   });
   return toImageView(r.artifacts.byId(id)!, a.workItem);
 }

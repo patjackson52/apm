@@ -143,3 +143,17 @@ describe('image.show/revise/find/pair', () => {
     });
   });
 });
+
+describe('bug capture (--blocker)', () => {
+  it('links a bug screenshot to a blocker, discoverable via imagesByBlocker', () => {
+    const ctx = { storage, clock };
+    const wi = work.create(ctx, { type: 'feature', title: 'B', agent: 'agent:claude' });
+    const blkId = storage.transaction('immediate', (tx) =>
+      repos(tx).blockers.insert({ workItemId: wi.id, type: 'bug', reason: 'broken' }),
+    );
+    const v = image.add(ctx, { workItem: wi.id, kind: 'bug', alt: 'broken', blocker: blkId, agent: 'agent:claude', blob: putBlob(dir, PNG) });
+    expect(v.kind).toBe('bug');
+    const found = storage.transaction('deferred', (tx) => repos(tx).artifacts.imagesByBlocker(blkId));
+    expect(found.map((row: any) => row.id)).toContain(v.id);
+  });
+});

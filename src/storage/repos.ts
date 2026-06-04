@@ -253,6 +253,12 @@ export function repos(tx: Tx) {
           sha256,
         );
       },
+      imagesByBlocker(blockerId: string): any[] {
+        return tx.all(
+          "SELECT * FROM artifacts WHERE type='image' AND json_extract(metadata_json,'$.blocker')=? ORDER BY id",
+          blockerId,
+        );
+      },
     },
     blobs: {
       insert(m: { sha256: string; mime: string; ext: string; byte_size: number; width: number | null; height: number | null }) {
