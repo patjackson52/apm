@@ -89,19 +89,10 @@ describe('image required-context enrichment', () => {
     expect(entry.alt).toBe('mockup');
     expect(entry.blob).toBe(img.blob);
   });
-
-  it('leaves non-image required_context entries without image fields', () => {
-    // a spec artifact has no path/alt/blob
-    const NON_IMG = YAML.replace('artifacts: [image]', 'artifacts: [spec]');
-    workflow.register(ctx(), NON_IMG.replace('id: ctxwf', 'id: specwf').replace('name: ctxwf', 'name: specwf'));
-    const wi = work.create(ctx(), { type: 'feature', title: 'F2', agent: 'claude' });
-    // seed a spec artifact via the artifact usecase
-    // (import lazily to keep this test focused)
-  });
 });
 ```
 
-> The second `it` is a stub illustrating intent; keep only the first assertion-bearing test if seeding a spec artifact adds noise — the non-image path is covered structurally (fields only set when `art.type==='image'`).
+> The non-image path (text entries get no `path`/`alt`/`blob`) is covered structurally — those fields are only set when `art.type==='image'` — and verified by Task 2's render test, which includes a non-image `spec` entry.
 
 - [ ] **Step 2: Run test to verify it fails**
 
