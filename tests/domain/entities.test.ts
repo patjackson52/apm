@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toWorkItemView, toSessionView, toLeaseView, toArtifactView } from '../../src/domain/entities.js';
+import { toWorkItemView, toSessionView, toLeaseView, toArtifactView, toImageView } from '../../src/domain/entities.js';
 
 describe('entity mappers', () => {
   it('maps a work item row to a canonical view with id refs', () => {
@@ -49,5 +49,29 @@ describe('toArtifactView metadata', () => {
       created_at: '2026-06-04T00:00:00.000Z', body: null, metadata_json: null,
     };
     expect(toArtifactView(row).metadata).toBeNull();
+  });
+});
+
+describe('toImageView', () => {
+  it('maps an image artifact row + metadata to an ImageView with a blob path', () => {
+    const row = {
+      id: 'IMG-1', type: 'image', title: 'login', version: 1, status: 'draft',
+      root_artifact_id: 'IMG-1', supersedes_artifact_id: null, created_by: 'agent:claude',
+      created_at: '2026-06-04T00:00:00.000Z', body: 'login screen',
+      metadata_json: JSON.stringify({
+        kind: 'screenshot', blob: 'a'.repeat(64), mime: 'image/png', ext: 'png',
+        width: 1280, height: 800, byte_size: 4242, alt: 'login screen',
+        capture: { route: '/login' },
+      }),
+    };
+    const v = toImageView(row, 'WI-1');
+    expect(v.id).toBe('IMG-1');
+    expect(v.kind).toBe('screenshot');
+    expect(v.blob).toBe('a'.repeat(64));
+    expect(v.width).toBe(1280);
+    expect(v.alt).toBe('login screen');
+    expect(v.path).toBe(`.apm/blobs/aa/${'a'.repeat(64)}.png`);
+    expect(v.capture).toEqual({ route: '/login' });
+    expect(v.work_item).toBe('WI-1');
   });
 });
