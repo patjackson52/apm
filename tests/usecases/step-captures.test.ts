@@ -44,6 +44,26 @@ function setup() {
   return { wi, run };
 }
 
+describe('step.complete --image-file evidence binding', () => {
+  it('ingests a screenshot, links it as evidence, embeds it in the output doc, and satisfies the gate', () => {
+    const { wi, run } = setup();
+    const blob = putBlob(dir, PNG);
+    const view = step.complete(ctx(), { run: run.id, step: 'shoot', agent: 'claude', imageBlob: blob, imageKind: 'screenshot', imageAlt: 'home' });
+    expect(view).toBeTruthy();
+
+    const imgs = image.list(ctx(), { workItem: wi.id });
+    expect(imgs.items.length).toBe(1);
+    const imgId = imgs.items[0].id;
+
+    const out = storage.transaction('deferred', (tx) => {
+      const sr: any = tx.get("SELECT output_artifact_id FROM workflow_step_runs WHERE workflow_run_id=? AND step_id='shoot'", run.id);
+      return tx.get('SELECT type, body FROM artifacts WHERE id=?', sr.output_artifact_id);
+    }) as any;
+    expect(out.type).toBe('review');
+    expect(out.body).toContain(`apm:${imgId}`);
+  });
+});
+
 describe('capture gate on step completion', () => {
   it('blocks completion when a required capture has no evidence image', () => {
     const { run } = setup();
