@@ -22,8 +22,8 @@ describe('ImagesGallery', () => {
     render(<ImagesGallery workItemId="WI-1" />);
     const imgs = screen.getAllByRole('img');
     expect(imgs).toHaveLength(2);
-    expect(imgs[0].getAttribute('src')).toBe('/api/blob/' + 'aa'.repeat(32));
-    expect(imgs[0].getAttribute('loading')).toBe('lazy');
+    expect(imgs[0]!.getAttribute('src')).toBe('/api/blob/' + 'aa'.repeat(32));
+    expect(imgs[0]!.getAttribute('loading')).toBe('lazy');
     expect(screen.getByAltText('home')).toBeTruthy();
     expect(screen.getByRole('link', { name: /home/i }).getAttribute('href')).toBe('/images/IMG-1');
   });
