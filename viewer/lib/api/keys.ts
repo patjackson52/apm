@@ -23,4 +23,7 @@ export const qk = {
   sessions: () => ['sessions'] as const,
   projects: () => ['projects'] as const,
   search: (q: string) => ['search', q] as const,
+  workImages: (id: string) => ['work', id, 'images'] as const,
+  image: (id: string) => ['image', id] as const,
+  imageVersions: (id: string) => ['image', id, 'versions'] as const,
 };

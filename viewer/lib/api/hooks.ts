@@ -42,3 +42,9 @@ export const useEvents = (f: import('./endpoints').EventsFilter = {}, o?: Opt) =
 export const useSessions = (o?: Opt) => useApiQuery(qk.sessions(), ep.sessions.path(), ep.sessions.schema, SEMI, o);
 export const useProjects = (o?: Opt) => useApiQuery(qk.projects(), ep.projects.path(), ep.projects.schema, SEMI, o);
 export const useSearch = (q: string, o?: Opt & { enabled?: boolean }) => useApiQuery(qk.search(q), ep.search.path(q), ep.search.schema, false, o);
+export const useWorkImages = (id: string, o?: Opt) =>
+  useApiQuery(qk.workImages(id), ep.workImages.path(id), ep.workImages.schema, SEMI, o);
+export const useImage = (id: string, o?: Opt) =>
+  useApiQuery(qk.image(id), ep.image.path(id), ep.image.schema, SEMI, o);
+export const useImageVersions = (id: string, o?: Opt) =>
+  useApiQuery(qk.imageVersions(id), ep.imageVersions.path(id), ep.imageVersions.schema, SEMI, o);
