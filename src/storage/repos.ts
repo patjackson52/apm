@@ -81,6 +81,24 @@ export function repos(tx: Tx) {
           "SELECT source_work_item_id FROM work_item_links WHERE target_work_item_id=? AND link_type='depends_on' ORDER BY source_work_item_id", target,
         ).map((r) => r.source_work_item_id);
       },
+      /** A dep is satisfied when its status is terminal (completed OR cancelled). */
+      allDepsSatisfied(source: string): boolean {
+        for (const t of this.dependsOn(source)) {
+          const wi = tx.get<{ status: string }>('SELECT status FROM work_items WHERE id=?', t);
+          if (!wi) throw new Error(`dependency target ${t} missing for ${source}`);
+          if (wi.status !== 'completed' && wi.status !== 'cancelled') return false;
+        }
+        return true;
+      },
+      unmetDeps(source: string): string[] {
+        const out: string[] = [];
+        for (const t of this.dependsOn(source)) {
+          const wi = tx.get<{ status: string }>('SELECT status FROM work_items WHERE id=?', t);
+          if (!wi) throw new Error(`dependency target ${t} missing for ${source}`);
+          if (wi.status !== 'completed' && wi.status !== 'cancelled') out.push(t);
+        }
+        return out;
+      },
     },
     defs: {
       byNameVersion(name: string, version: number): any | undefined {

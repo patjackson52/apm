@@ -178,14 +178,7 @@ export function blockers(ctx: Ctx, id: string): BlockersResult {
 
     const openBlockers = r.blockers.openForWorkItem(id).map(toBlockerView);
 
-    const depIds = r.links.dependsOn(id);
-    const unmetDeps: string[] = [];
-    for (const depId of depIds) {
-      const dep = r.workItems.byId(depId);
-      if (dep && dep.status !== 'completed') {
-        unmetDeps.push(depId);
-      }
-    }
+    const unmetDeps = r.links.unmetDeps(id);
 
     return { open_blockers: openBlockers, unmet_dependencies: unmetDeps };
   });

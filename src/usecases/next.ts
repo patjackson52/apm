@@ -86,13 +86,8 @@ function buildRankedCandidates(tx: Tx, args: NextArgs): RankedResult {
     const workItemId = row.id;
     const runId = row.run_id;
 
-    // Deps: all depends_on targets must be completed
-    const depIds = r.links.dependsOn(workItemId);
-    let depsAllComplete = true;
-    for (const depId of depIds) {
-      const dep = r.workItems.byId(depId);
-      if (dep && dep.status !== 'completed') { depsAllComplete = false; break; }
-    }
+    // Deps: every depends_on target must be terminal (completed OR cancelled).
+    const depsAllComplete = r.links.allDepsSatisfied(workItemId);
 
     // Blockers: any open human_gate?
     const openBlockers = r.blockers.openForWorkItem(workItemId);
@@ -325,6 +320,14 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
           "UPDATE leases SET status='expired' WHERE resource_type='work_item' AND resource_key=? AND status='active' AND expires_at <= ? AND agent_id != ?",
           workItemId, now, args.agent,
         );
+
+        // Self-heal readiness: a draft item whose deps are all satisfied is ready.
+        // Done inside the acquire tx (atomic with the lease grant) so the cascade
+        // race can't strand a dispatchable draft.
+        const wiRow = tx.get<{ status: string }>('SELECT status FROM work_items WHERE id=?', workItemId);
+        if (wiRow?.status === 'draft' && r.links.allDepsSatisfied(workItemId)) {
+          r.workItems.setStatus(workItemId, 'ready', args.agent);
+        }
 
         r.agents.ensure(args.agent);
         const leaseId = tx.allocateId('LEASE');
