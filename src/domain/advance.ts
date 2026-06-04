@@ -10,6 +10,8 @@ import { repos } from '../storage/repos.js';
 import { ApmError } from './errors.js';
 import { nextStepId, stepById, type WorkflowDef, type StepDef } from './workflow.js';
 import { effectivePolicy } from './policy.js';
+import { unmetCaptures } from './captures.js';
+import { toImageView } from './entities.js';
 
 /**
  * Reopen a reviewer child step_run for a given role on a review_gate main step.
@@ -182,6 +184,21 @@ export function completeMainStep(
       if (!art) {
         throw new ApmError('E_PRECONDITION', `missing required output: ${out.artifact_type}`);
       }
+    }
+  }
+
+  if (stepDef.requires?.captures?.length) {
+    const roots = r.artifacts.linkedImagesByRelation(runRow.work_item_id, 'evidence');
+    const images = roots
+      .map((root) => r.artifacts.currentByRoot(root))
+      .filter(Boolean)
+      .map((row: any) => {
+        const v = toImageView(row);
+        return { kind: v.kind, capture: v.capture };
+      });
+    const unmet = unmetCaptures(stepDef.requires.captures, images);
+    if (unmet.length) {
+      throw new ApmError('E_PRECONDITION', `missing required captures: ${unmet.join(', ')}`);
     }
   }
 

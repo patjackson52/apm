@@ -237,6 +237,16 @@ export function repos(tx: Tx) {
           workItemId,
         ).map((x) => x.r);
       },
+      linkedImagesByRelation(workItemId: string, relation: string): string[] {
+        return tx.all<{ r: string }>(
+          `SELECT wia.root_artifact_id AS r
+           FROM work_item_artifacts wia
+           JOIN artifacts a ON a.id = wia.root_artifact_id
+           WHERE wia.work_item_id=? AND wia.relation_type=? AND a.type='image'
+           ORDER BY r`,
+          workItemId, relation,
+        ).map((x) => x.r);
+      },
       imagesByBlob(sha256: string): any[] {
         return tx.all(
           "SELECT * FROM artifacts WHERE type='image' AND json_extract(metadata_json,'$.blob')=? ORDER BY id",
