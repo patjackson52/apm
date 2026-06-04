@@ -6,6 +6,7 @@ import Database from 'better-sqlite3';
 import { initProject } from '../../src/usecases/init.js';
 import { SqliteStorage } from '../../src/storage/sqlite.js';
 import { fixedClock } from '../../src/domain/clock.js';
+import { MIGRATIONS, runMigrations } from '../../src/storage/migrations.js';
 
 let dir: string; let storage: SqliteStorage;
 const clock = fixedClock('2026-06-03T12:00:00.000Z');
@@ -29,10 +30,53 @@ describe('migration v2 — resource leases', () => {
   });
 
   it('backfills resource_type/resource_key for pre-existing work-item leases', () => {
-    const db = new Database(join(dir, '.apm', 'apm.db'));
+    // Use a separate temp DB to simulate a v1-shaped database with an existing lease row.
+    const v1dir = mkdtempSync(join(tmpdir(), 'apm-mig-v1-'));
+    const dbPath = join(v1dir, 'v1.db');
     try {
-      const ver = db.pragma('user_version', { simple: true }) as number;
-      expect(ver).toBeGreaterThanOrEqual(2);
-    } finally { db.close(); }
+      // 1. Open raw DB and apply only migration v1.
+      const raw = new Database(dbPath);
+      raw.pragma('foreign_keys = ON');
+      const stamp = '2026-06-03T00:00:00.000Z';
+      MIGRATIONS[0].up(raw, stamp); // runs schema.sql (v1 shape)
+      raw.pragma('user_version = 1');
+
+      // 2. Insert minimal rows satisfying FKs, then a v1-shaped lease row.
+      raw.prepare(
+        "INSERT INTO agents (id, name, type, created_at) VALUES (?, ?, ?, ?)"
+      ).run('AGT-1', 'test-agent', 'ai', stamp);
+      raw.prepare(
+        "INSERT INTO sequences (prefix, next_value) VALUES (?, ?)"
+      ).run('WI', 1);
+      raw.prepare(
+        "INSERT INTO work_items (id, type, title, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run('WI-1', 'task', 'Test task', 'ready', stamp, stamp);
+
+      // v1 leases shape: no resource_type/resource_key columns.
+      raw.prepare(
+        `INSERT INTO leases (id, work_item_id, agent_id, session_id, status, acquired_at, expires_at, heartbeat_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run('LEASE-1', 'WI-1', 'AGT-1', null, 'active', stamp, '2026-06-03T01:00:00.000Z', null);
+
+      raw.close();
+
+      // 3. Run migrations on the raw DB (v1→v2).
+      const raw2 = new Database(dbPath);
+      runMigrations(raw2, stamp);
+      raw2.close();
+
+      // 4. Re-open and assert backfill.
+      const verify = new Database(dbPath);
+      try {
+        const row = verify.prepare("SELECT resource_type, resource_key, work_item_id FROM leases WHERE id = ?").get('LEASE-1') as
+          { resource_type: string; resource_key: string; work_item_id: string };
+        expect(row).toBeTruthy();
+        expect(row.resource_type).toBe('work_item');
+        expect(row.resource_key).toBe('WI-1');
+        expect(row.work_item_id).toBe('WI-1');
+      } finally { verify.close(); }
+    } finally {
+      rmSync(v1dir, { recursive: true, force: true });
+    }
   });
 });

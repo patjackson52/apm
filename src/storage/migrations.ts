@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const schemaSql = readFileSync(fileURLToPath(new URL('./schema.sql', import.meta.url)), 'utf8');
 
 /** Ordered migrations. Migration 1 is the full V1 schema. */
-const MIGRATIONS: Array<{ version: number; up: (db: Database.Database, stamp: string) => void }> = [
+export const MIGRATIONS: Array<{ version: number; up: (db: Database.Database, stamp: string) => void }> = [
   {
     version: 1,
     up: (db, stamp) => {
