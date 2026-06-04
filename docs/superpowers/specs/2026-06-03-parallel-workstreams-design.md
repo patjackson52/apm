@@ -119,3 +119,15 @@ Owned by `/loop` + the superpowers git skills, *not* APM core. APM only records 
 1. **Spec A** — A1 (migration) → A2/A3/A4/A5 (mostly independent) → A6 harness. This is itself a good parallel-work demo once A2 lands.
 2. **Spec B** — fence token + heartbeat contract + poison quarantine + observability.
 3. **Spec C** — runner-side wiring (separate plan; lives in `/loop` + git skills).
+
+## 10. Spec A — status & carried-forward follow-ups
+
+**Status:** Spec A implemented and merged (16 commits, 321 tests green, typecheck clean). Plan: `docs/superpowers/plans/2026-06-03-parallel-safety-core.md`. All tasks passed per-task spec+quality review and a final whole-implementation review.
+
+Items the final cross-task review flagged as **prerequisites before Spec B/C builds on this** (none are Spec-A blockers):
+
+- **[I1 → Spec C] Surface the slot lease id for runner release.** `apm next --acquire` acquires a `slot` lease implicitly but the dispatch payload returns only the work-item lease, so a runner cannot release its slot — it expires only on TTL. At `max_parallel_agents=1` (serial mode) a polling-but-idle agent holds the sole slot for the full TTL, locking others out until expiry (latency, not a deadlock — lazy-heal reclaims on `expires_at`). Fix in Spec C: add `data.slot_lease` to the dispatch payload and have the runner `lease release` it in `finally`; or shorten slot TTL relative to work TTL.
+- **[I2 → Spec B] Reconcile the two global-policy readers.** `globalFleetPolicy` merges all `scope_type='global'` rows `ORDER BY id` (last wins); `effectivePolicy`/`repos.policies.global()` uses `LIMIT 1` with no `ORDER BY`. They agree out-of-box (seed creates exactly one global row) but split-brain if an operator adds a second global row (fleet cap reads the new value; `auto_activate_dependents`/`auto_accept` read the stale one). True fix: make `effectivePolicy` merge global rows too (touches advance/workflow/decision — do it deliberately with tests), or enforce a single global row.
+- **[M1] Filter operator lease views to `resource_type='work_item'`.** `apm status` active-leases and `apm lease list` now also surface `slot`/`integration` leases (the work-item `active` count is unaffected — it uses `COUNT(DISTINCT work_item_id)`).
+- **[M2] Remove the now-redundant singular `selectCandidate`** in `resolver.ts` (superseded by `selectCandidates`; only its own test keeps it alive) and migrate its tests.
+- **[M3] Wrap the missing-dep-target throw in `ApmError`.** `allDepsSatisfied`/`unmetDeps` throw a raw `Error` on a missing target (currently unreachable — FK `ON DELETE RESTRICT`, no hard-delete path), reached from hot read paths (`next`, `blockers`, cascade, terminal guard). Wrap as `E_VALIDATION` for graceful surfacing if it ever fires.
