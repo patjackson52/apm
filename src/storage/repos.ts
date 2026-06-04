@@ -259,6 +259,9 @@ export function repos(tx: Tx) {
           blockerId,
         );
       },
+      versionsOfRoot(rootId: string): any[] {
+        return tx.all('SELECT * FROM artifacts WHERE root_artifact_id=? ORDER BY version DESC', rootId);
+      },
     },
     blobs: {
       insert(m: { sha256: string; mime: string; ext: string; byte_size: number; width: number | null; height: number | null }) {
