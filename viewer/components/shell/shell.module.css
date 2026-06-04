@@ -14,3 +14,5 @@
 .navLink { display: block; padding: 6px 10px; border-radius: var(--radius-sm); color: var(--fg-muted); text-decoration: none; }
 .navLink[aria-current="page"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
 .main { flex: 1; padding: 24px; }
+
+.search input { font-size: 12px; padding: 3px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--fg); }
