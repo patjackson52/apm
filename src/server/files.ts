@@ -34,6 +34,36 @@ export function resolveFilePath(projectRoot: string, rel: string | null | undefi
   }
 }
 
+/** Raster image extensions served from the content-addressed blob store (SVG excluded for parity with the files jail). */
+const BLOB_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
+
+/** Serve a content-addressed blob by sha256 with immutable caching. sha must be 64 hex chars. */
+export function serveBlob(
+  projectRoot: string,
+  sha: string | null | undefined,
+  res: http.ServerResponse,
+  baseHeaders: Record<string, string> = {},
+): void {
+  if (!sha || !/^[0-9a-f]{64}$/.test(sha)) { res.writeHead(404); res.end(); return; }
+  const dir = path.join(projectRoot, '.apm', 'blobs', sha.slice(0, 2));
+  let file: string | null = null;
+  try {
+    for (const name of fs.readdirSync(dir)) {
+      if (name.startsWith(sha + '.') && BLOB_EXT.has(path.extname(name).toLowerCase())) { file = path.join(dir, name); break; }
+    }
+  } catch { /* dir missing → 404 below */ }
+  if (!file || !fs.statSync(file).isFile()) { res.writeHead(404); res.end(); return; }
+  const ext = path.extname(file).toLowerCase();
+  res.writeHead(200, {
+    ...baseHeaders,
+    'Content-Type': contentTypeFor(ext),
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'public, max-age=31536000, immutable',
+    ETag: `"${sha}"`,
+  });
+  res.end(fs.readFileSync(file));
+}
+
 /** Serve an allowlisted image file, or 404 for any rejection (no info leak). */
 export function serveFile(projectRoot: string, rel: string | null | undefined, res: http.ServerResponse, baseHeaders: Record<string, string> = {}): void {
   const p = resolveFilePath(projectRoot, rel);
