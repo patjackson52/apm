@@ -7,8 +7,9 @@ export interface NewWorkItem {
 }
 
 export interface NewArtifact {
-  type: ArtifactType; title: string; body: string; createdBy: string;
+  type: ArtifactType; title: string; body: string | null; createdBy: string;
   version: number; rootId?: string; supersedes?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface NewDecision {
@@ -173,15 +174,23 @@ export function repos(tx: Tx) {
       },
     },
     artifacts: {
-      insert(a: NewArtifact): string {
-        const id = tx.allocateId('ART');
+      insert(a: NewArtifact, eventType: string = 'artifact.created'): string {
+        const id = tx.allocateId(a.type === 'image' ? 'IMG' : 'ART');
         // If no rootId provided (v1 artifact), root = own id
         const rootId = a.rootId ?? id;
         tx.run(
-          "INSERT INTO artifacts (id, type, title, version, status, body, root_artifact_id, created_by, created_at, supersedes_artifact_id) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)",
-          id, a.type, a.title, a.version, a.body, rootId, a.createdBy, now, a.supersedes ?? null,
+          "INSERT INTO artifacts (id, type, title, version, status, body, metadata_json, root_artifact_id, created_by, created_at, supersedes_artifact_id) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)",
+          id, a.type, a.title, a.version, a.body,
+          a.metadata != null ? JSON.stringify(a.metadata) : null,
+          rootId, a.createdBy, now, a.supersedes ?? null,
         );
-        tx.appendEvent({ actorId: a.createdBy, eventType: 'artifact.created', entityType: 'artifact', entityId: id, payload: { type: a.type, version: a.version } });
+        tx.appendEvent({
+          actorId: a.createdBy,
+          eventType,
+          entityType: 'artifact',
+          entityId: id,
+          payload: { type: a.type, version: a.version },
+        });
         return id;
       },
       byId(id: string): any | undefined {
@@ -217,6 +226,33 @@ export function repos(tx: Tx) {
       },
       setSuperseded(id: string) {
         tx.run("UPDATE artifacts SET status='superseded' WHERE id=?", id);
+      },
+      linkedImages(workItemId: string): string[] {
+        return tx.all<{ r: string }>(
+          `SELECT wia.root_artifact_id AS r
+           FROM work_item_artifacts wia
+           JOIN artifacts a ON a.id = wia.root_artifact_id
+           WHERE wia.work_item_id=? AND a.type='image'
+           ORDER BY r`,
+          workItemId,
+        ).map((x) => x.r);
+      },
+      imagesByBlob(sha256: string): any[] {
+        return tx.all(
+          "SELECT * FROM artifacts WHERE type='image' AND json_extract(metadata_json,'$.blob')=? ORDER BY id",
+          sha256,
+        );
+      },
+    },
+    blobs: {
+      insert(m: { sha256: string; mime: string; ext: string; byte_size: number; width: number | null; height: number | null }) {
+        tx.run(
+          'INSERT OR IGNORE INTO blobs (sha256, mime, ext, byte_size, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          m.sha256, m.mime, m.ext, m.byte_size, m.width, m.height, now,
+        );
+      },
+      byId(sha256: string): any | undefined {
+        return tx.get('SELECT * FROM blobs WHERE sha256=?', sha256);
       },
     },
     decisions: {

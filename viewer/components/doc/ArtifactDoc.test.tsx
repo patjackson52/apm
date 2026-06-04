@@ -6,7 +6,7 @@ import type { ArtifactView } from '@apm/types';
 const art = (body: string | null): ArtifactView => ({
   id: 'ART-9', type: 'spec', title: 'My Spec', version: 2, status: 'approved',
   root: 'ART-9', supersedes: null, created_by: 'claude', created_at: '2026-01-01',
-  body, work_item: 'WI-1',
+  body, work_item: 'WI-1', metadata: null,
 });
 
 describe('ArtifactDoc', () => {

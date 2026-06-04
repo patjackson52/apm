@@ -6,7 +6,7 @@ import type { ArtifactView } from '@apm/types';
 const v = (id: string, version: number): ArtifactView => ({
   id, type: 'spec', title: 't', version, status: 'draft', root: 'R',
   supersedes: null, created_by: 'a', created_at: '2026-01-0' + version + 'T00:00:00Z',
-  body: null, work_item: 'WI-1',
+  body: null, work_item: 'WI-1', metadata: null,
 });
 
 describe('VersionTimeline', () => {

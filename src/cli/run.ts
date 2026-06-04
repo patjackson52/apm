@@ -35,6 +35,16 @@ export function findProjectDb(start: string): string {
   }
 }
 
+/** The project root (dir holding .apm) for blob IO, mirroring runCommand's db resolution. */
+export function resolveProjectRoot(dir?: string): string {
+  if (dir != null) {
+    const candidate = join(resolve(dir), '.apm', 'apm.db');
+    if (!existsSync(candidate)) throw new ApmError('E_NOT_FOUND', 'no APM project found (run `apm init`)');
+    return resolve(dir);
+  }
+  return dirname(dirname(findProjectDb(process.cwd())));
+}
+
 export function runCommand(deps: RunDeps, command: string, fn: (ctx: Ctx) => CmdResult): number {
   const clock = deps.clock ?? systemClock;
   const out = deps.out ?? ((s: string) => process.stdout.write(s + '\n'));

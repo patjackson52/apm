@@ -152,6 +152,16 @@ CREATE TABLE work_item_artifacts (
   FOREIGN KEY(root_artifact_id) REFERENCES artifacts(id) ON DELETE RESTRICT
 );
 
+CREATE TABLE blobs (
+  sha256 TEXT PRIMARY KEY,
+  mime TEXT NOT NULL,
+  ext TEXT NOT NULL,
+  byte_size INTEGER NOT NULL,
+  width INTEGER,
+  height INTEGER,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE workflow_step_runs (
   id TEXT PRIMARY KEY,
   workflow_run_id TEXT NOT NULL,

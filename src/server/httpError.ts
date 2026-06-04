@@ -10,6 +10,7 @@ export const CODE_HTTP: Record<ErrorCode, number> = {
   E_AWAITING_HUMAN: 409,
   E_NOT_FOUND: 404,
   E_INTERNAL: 500,
+  E_UNSUPPORTED: 501,
 };
 
 /** HTTP status for any thrown value (non-ApmError → 500). */

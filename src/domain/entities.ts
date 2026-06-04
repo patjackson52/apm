@@ -3,6 +3,7 @@ import type {
   StepRunStatus, ReviewVerdict,
 } from './types.js';
 import type { StepDef } from './workflow.js';
+import { blobRelPath } from '../storage/blobstore.js';
 
 export interface Page<T> { items: T[]; page: { total: number; limit: number; offset: number; has_more: boolean }; }
 
@@ -86,6 +87,8 @@ export interface ArtifactView {
   // null on lean reads (e.g. list, which omits the body column).
   body: string | null;
   work_item: string | null;
+  // Parsed from metadata_json. null when absent. Holds image/capture records for type='image'.
+  metadata: Record<string, unknown> | null;
 }
 /** Dumb mapper: body comes straight off the row (null if absent); work_item is supplied by the caller. */
 export function toArtifactView(row: any, workItem: string | null = null): ArtifactView {
@@ -94,6 +97,7 @@ export function toArtifactView(row: any, workItem: string | null = null): Artifa
     root: row.root_artifact_id, supersedes: row.supersedes_artifact_id ?? null,
     created_by: row.created_by ?? null, created_at: row.created_at,
     body: row.body ?? null, work_item: workItem,
+    metadata: row.metadata_json != null ? JSON.parse(row.metadata_json) : null,
   };
 }
 
@@ -184,5 +188,51 @@ export function toEventView(row: any): EventView {
     entity_id: row.entity_id,
     payload: row.payload_json ? JSON.parse(row.payload_json) : null,
     created_at: row.created_at,
+  };
+}
+
+export interface ImageView {
+  id: string;
+  version: number;
+  status: ArtifactStatus;
+  root: string;
+  supersedes: string | null;
+  kind: string;
+  blob: string;
+  mime: string;
+  ext: string;
+  width: number | null;
+  height: number | null;
+  byte_size: number;
+  alt: string | null;
+  capture: Record<string, unknown> | null;
+  path: string; // relative blob path; path IS the content hash
+  created_by: string | null;
+  created_at: string;
+  work_item: string | null;
+}
+
+/** Map an image artifact row (type='image') + its metadata_json to an ImageView. */
+export function toImageView(row: any, workItem: string | null = null): ImageView {
+  const m = row.metadata_json != null ? JSON.parse(row.metadata_json) : {};
+  return {
+    id: row.id,
+    version: row.version,
+    status: row.status,
+    root: row.root_artifact_id,
+    supersedes: row.supersedes_artifact_id ?? null,
+    kind: m.kind ?? 'screenshot',
+    blob: m.blob,
+    mime: m.mime,
+    ext: m.ext,
+    width: m.width ?? null,
+    height: m.height ?? null,
+    byte_size: m.byte_size ?? 0,
+    alt: m.alt ?? null,
+    capture: m.capture ?? null,
+    path: m.blob ? blobRelPath(m.blob, m.ext) : '',
+    created_by: row.created_by ?? null,
+    created_at: row.created_at,
+    work_item: workItem,
   };
 }

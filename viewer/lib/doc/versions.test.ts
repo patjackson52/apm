@@ -4,7 +4,7 @@ import type { ArtifactView } from '@apm/types';
 
 const mk = (id: string, root: string, version: number): ArtifactView => ({
   id, type: 'spec', title: 't', version, status: 'draft', root,
-  supersedes: null, created_by: 'a', created_at: '2026-01-01', body: null, work_item: 'WI-1',
+  supersedes: null, created_by: 'a', created_at: '2026-01-01', body: null, work_item: 'WI-1', metadata: null,
 });
 
 describe('groupByRoot', () => {

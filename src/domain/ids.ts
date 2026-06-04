@@ -2,6 +2,7 @@
 export const ID_PREFIXES = {
   workItem: 'WI',
   artifact: 'ART',
+  image: 'IMG',
   decision: 'DEC',
   adr: 'ADR',
   blocker: 'BLK',
