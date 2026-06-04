@@ -23,7 +23,7 @@ import { WorkDetailTabs } from './WorkDetailTabs';
 const art = (id: string, type: string, version: number, root: string) => ({
   id, type, title: type + ' ' + version, version, status: 'draft', root,
   supersedes: null, created_by: 'a', created_at: '2026-01-0' + version + 'T00:00:00Z',
-  body: '## H', work_item: 'WI-1',
+  body: '## H', work_item: 'WI-1', metadata: null,
 });
 
 beforeEach(() => {

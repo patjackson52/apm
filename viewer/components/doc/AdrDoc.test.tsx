@@ -6,7 +6,7 @@ import type { ArtifactView } from '@apm/types';
 const adr: ArtifactView = {
   id: 'ADR-2', type: 'adr', title: 'Use SQLite', version: 1, status: 'accepted',
   root: 'ADR-2', supersedes: null, created_by: 'p', created_at: '2026-02-03T00:00:00Z',
-  body: '## Context\n\nWe need storage.', work_item: 'WI-1',
+  body: '## Context\n\nWe need storage.', work_item: 'WI-1', metadata: null,
 };
 
 describe('AdrDoc', () => {
