@@ -150,6 +150,7 @@ export interface StepRunView {
   completed_at: string | null;
   output_artifact_id: string | null;
   failure_reason: string | null;
+  dispatch_prompt: string | null;
 }
 
 export function toStepRunView(row: any): StepRunView {
@@ -166,6 +167,7 @@ export function toStepRunView(row: any): StepRunView {
     completed_at: row.completed_at ?? null,
     output_artifact_id: row.output_artifact_id ?? null,
     failure_reason: row.failure_reason ?? null,
+    dispatch_prompt: row.dispatch_prompt ?? null,
   };
 }
 

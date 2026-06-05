@@ -13,6 +13,8 @@ export interface StepOverlay {
   artifactId?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
+  /** Agent-format dispatch contract last built by `apm next --acquire` for this step. */
+  dispatchPrompt?: string | null;
 }
 
 // Latest-first by (review_round desc, started_at desc); null started_at sorts last.
@@ -45,6 +47,7 @@ export function buildOverlay(stepRuns: StepRunView[]): Map<string, StepOverlay> 
       artifactId: main.output_artifact_id,
       startedAt: main.started_at,
       completedAt: main.completed_at,
+      dispatchPrompt: main.dispatch_prompt,
     });
   }
   return out;

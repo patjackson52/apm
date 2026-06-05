@@ -66,6 +66,13 @@ export function register(ctx: Ctx, defObjOrYaml: string | object) {
     const r = repos(tx);
     const existing = r.defs.byNameVersion(def.name, def.version);
     if (existing) throw new ApmError('E_CONFLICT', `workflow ${def.name}@${def.version} already registered`);
+    // Every referenced prompt_id must resolve to a stored prompt, else `apm next`
+    // would dispatch a contract pointing at a phantom prompt. Fail fast, loud.
+    for (const s of def.steps) {
+      if (s.prompt_id && !r.prompts.byName(s.prompt_id)) {
+        throw new ApmError('E_VALIDATION', `step ${s.id}: prompt '${s.prompt_id}' not found (create it with 'apm prompt create' first)`);
+      }
+    }
     const id = r.defs.register({ name: def.name, version: def.version, definitionJson: JSON.stringify(def) });
     return defToView(r.defs.byId(id)!);
   });

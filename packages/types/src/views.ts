@@ -89,6 +89,7 @@ export const StepRunViewSchema = z.object({
   completed_at: z.string().nullable(),
   output_artifact_id: z.string().nullable(),
   failure_reason: z.string().nullable(),
+  dispatch_prompt: z.string().nullable(),
 }).strict();
 
 export const ArtifactViewSchema = z.object({

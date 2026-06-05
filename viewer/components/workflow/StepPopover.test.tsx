@@ -21,6 +21,22 @@ describe('StepPopover', () => {
     expect(container.querySelector('script')).toBeNull();
   });
 
+  it('renders the dispatch prompt as plain text (no markdown/HTML sink)', () => {
+    const withPrompt: StepOverlay = {
+      status: 'running', reviewers: [], startedAt: '2026-01-01', completedAt: null,
+      dispatchPrompt: 'WORK_ITEM:\nWI-1\n\nALLOWED_ACTION:\n<script>alert(2)</script>',
+    };
+    const { container } = render(<StepPopover step={{ id: 'brainstorm', type: 'agent_prompt' }} overlay={withPrompt} onClose={() => {}} />);
+    expect(screen.getByText(/WORK_ITEM:/)).toBeTruthy();
+    expect(container.querySelector('script')).toBeNull();
+    expect(container.querySelector('pre')?.textContent).toContain('<script>alert(2)</script>');
+  });
+
+  it('omits the dispatch-prompt section when none was built', () => {
+    render(<StepPopover step={{ id: 'impl', type: 'agent_execution' }} overlay={overlay} onClose={() => {}} />);
+    expect(screen.queryByText('Dispatch prompt')).toBeNull();
+  });
+
   it('links to the artifact via an opaque same-origin path', () => {
     render(<StepPopover step={{ id: 'impl', type: 'agent_execution' }} overlay={overlay} onClose={() => {}} />);
     const link = screen.getByRole('link', { name: 'ART-9' });

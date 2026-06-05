@@ -59,6 +59,63 @@ export function buildContract(step: StepDef, requiredContext: ContextRef[], ids:
   }
 }
 
+/**
+ * Render a dispatched `next` payload into the agent-format prompt contract text.
+ * Pure and shared by the `agent` formatter (presentation) and `next` (which stores
+ * the result on the step run for reference + the viewer UI), so the stored text is
+ * byte-identical to what `apm next --format agent` prints.
+ */
+export interface CaptureRef { name: string; kind: string; route?: string; viewport?: { w: number; h: number }; prompt?: string; }
+export interface DispatchPayload {
+  work_item: string;
+  step: { id: string; type: string };
+  prompt_id?: string | null;
+  allowed_action?: string;
+  required_context?: ContextRef[];
+  required_captures?: CaptureRef[];
+  do_not?: string[];
+  when_done?: string[];
+}
+
+export function renderDispatchPrompt(d: DispatchPayload): string {
+  const lines: string[] = [];
+  lines.push('WORK_ITEM:', d.work_item);
+  lines.push('', 'CURRENT_STEP:', `${d.step.id} (${d.step.type})`);
+  if (d.prompt_id != null) lines.push('', 'PROMPT:', d.prompt_id);
+  lines.push('', 'ALLOWED_ACTION:', d.allowed_action ?? '');
+  if (Array.isArray(d.required_context) && d.required_context.length > 0) {
+    lines.push('', 'REQUIRED_CONTEXT:');
+    for (const ctx of d.required_context) {
+      if (ctx.path) {
+        lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" [image]`);
+        lines.push(`  path: ${ctx.path}`);
+        if (ctx.alt) lines.push(`  alt:  ${ctx.alt}`);
+      } else {
+        lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" — ${ctx.one_line}`);
+      }
+    }
+  }
+  if (Array.isArray(d.required_captures) && d.required_captures.length > 0) {
+    lines.push('', 'REQUIRED_CAPTURES:');
+    for (const c of d.required_captures) {
+      const parts = [c.name, `kind=${c.kind}`];
+      if (c.route) parts.push(`route=${c.route}`);
+      if (c.viewport) parts.push(`viewport=${c.viewport.w}x${c.viewport.h}`);
+      if (c.prompt) parts.push(`recipe=${c.prompt}`);
+      lines.push(parts.join('  '));
+    }
+  }
+  if (Array.isArray(d.do_not) && d.do_not.length > 0) {
+    lines.push('', 'DO_NOT:');
+    for (const item of d.do_not) lines.push(`- ${item}`);
+  }
+  if (Array.isArray(d.when_done) && d.when_done.length > 0) {
+    lines.push('', 'WHEN_DONE:');
+    for (const item of d.when_done) lines.push(item);
+  }
+  return lines.join('\n');
+}
+
 function doNotFor(step: StepDef): string[] {
   const dn: string[] = [];
   if (step.type === 'agent_prompt') { dn.push('write implementation code', 'open a PR'); }

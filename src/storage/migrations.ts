@@ -14,6 +14,20 @@ const MIGRATIONS: Array<{ version: number; up: (db: Database.Database, stamp: st
         .run(1, stamp);
     },
   },
+  {
+    // Persist the agent-format dispatch contract on each step run (for reference + viewer UI).
+    // schema.sql already declares the column for fresh DBs (applied at v1), so the ALTER is
+    // guarded and only fires for databases created before this column existed.
+    version: 2,
+    up: (db, stamp) => {
+      const cols = db.prepare('PRAGMA table_info(workflow_step_runs)').all() as Array<{ name: string }>;
+      if (!cols.some((c) => c.name === 'dispatch_prompt')) {
+        db.exec('ALTER TABLE workflow_step_runs ADD COLUMN dispatch_prompt TEXT');
+      }
+      db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)')
+        .run(2, stamp);
+    },
+  },
 ];
 
 export const CURRENT_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

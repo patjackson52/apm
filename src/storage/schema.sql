@@ -176,6 +176,9 @@ CREATE TABLE workflow_step_runs (
   completed_at TEXT,
   output_artifact_id TEXT,
   failure_reason TEXT,
+  -- The agent-format dispatch contract last built by `apm next --acquire` for this
+  -- step run, stored verbatim for reference/audit and the viewer UI.
+  dispatch_prompt TEXT,
   created_at TEXT NOT NULL,
   FOREIGN KEY(workflow_run_id) REFERENCES workflow_runs(id) ON DELETE RESTRICT,
   FOREIGN KEY(parent_step_run_id) REFERENCES workflow_step_runs(id) ON DELETE RESTRICT,

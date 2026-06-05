@@ -1,11 +1,19 @@
 import type { Storage } from '../storage/storage.js';
 import { validateWorkflow } from '../domain/workflow.js';
+import { repos } from '../storage/repos.js';
 import { FEATURE_DELIVERY, DEFAULT_POLICY } from '../workflows/feature_delivery.js';
+import { BUILTIN_PROMPTS } from '../workflows/prompts.js';
 
-/** Seed built-in workflow + default global policy. Idempotent. Runs inside its own immediate txn. */
+/** Seed built-in prompts + workflow + default global policy. Idempotent. Runs inside its own immediate txn. */
 export function seedBuiltins(storage: Storage): void {
   validateWorkflow(FEATURE_DELIVERY);
   storage.transaction('immediate', (tx) => {
+    // Prompts first: the workflow's agent_prompt steps reference these by name.
+    const r = repos(tx);
+    for (const p of BUILTIN_PROMPTS) {
+      if (!r.prompts.byName(p.name)) r.prompts.insert(p.name, p.body);
+    }
+
     const exists = tx.get("SELECT id FROM workflow_definitions WHERE name=? AND version=?", FEATURE_DELIVERY.id, FEATURE_DELIVERY.version);
     if (!exists) {
       const id = tx.allocateId('WD');
