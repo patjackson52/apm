@@ -90,6 +90,23 @@ export function StepPopover({
               <dd><a href={`/artifacts/${encodeURIComponent(overlay.artifactId)}`}>{overlay.artifactId}</a></dd>
             </>
           ) : null}
+          {overlay.dispatchPrompt ? (
+            <>
+              <dt>Dispatch prompt</dt>
+              <dd>
+                <details className={s.prompt}>
+                  <summary>Agent contract last dispatched</summary>
+                  {/* Plain text only — no markdown/HTML sink. */}
+                  <pre className={s.promptBody}>{overlay.dispatchPrompt}</pre>
+                  <CopyButton
+                    label="Copy dispatch prompt"
+                    onCopy={() => navigator.clipboard.writeText(overlay.dispatchPrompt ?? '')}
+                    disabled={typeof navigator === 'undefined' || !navigator.clipboard}
+                  />
+                </details>
+              </dd>
+            </>
+          ) : null}
         </dl>
       ) : (
         <p className={s.meta}>No run data for this step.</p>

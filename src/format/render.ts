@@ -1,5 +1,6 @@
 import { stringify as toYaml } from 'yaml';
 import type { Envelope } from './envelope.js';
+import { renderDispatchPrompt } from '../domain/contract.js';
 
 export type OutputFormat = 'human' | 'json' | 'yaml' | 'agent';
 
@@ -64,68 +65,7 @@ function renderAgent(envelope: Envelope<any>): string {
 
   // dispatched next payload (has work_item + step)
   if (d.work_item && d.step) {
-    const lines: string[] = [];
-
-    lines.push('WORK_ITEM:');
-    lines.push(d.work_item);
-
-    lines.push('');
-    lines.push('CURRENT_STEP:');
-    lines.push(`${d.step.id} (${d.step.type})`);
-
-    if (d.prompt_id != null) {
-      lines.push('');
-      lines.push('PROMPT:');
-      lines.push(d.prompt_id);
-    }
-
-    lines.push('');
-    lines.push('ALLOWED_ACTION:');
-    lines.push(d.allowed_action ?? '');
-
-    if (Array.isArray(d.required_context) && d.required_context.length > 0) {
-      lines.push('');
-      lines.push('REQUIRED_CONTEXT:');
-      for (const ctx of d.required_context) {
-        if (ctx.path) {
-          lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" [image]`);
-          lines.push(`  path: ${ctx.path}`);
-          if (ctx.alt) lines.push(`  alt:  ${ctx.alt}`);
-        } else {
-          lines.push(`${ctx.id}@${ctx.version} "${ctx.title}" — ${ctx.one_line}`);
-        }
-      }
-    }
-
-    if (Array.isArray(d.required_captures) && d.required_captures.length > 0) {
-      lines.push('');
-      lines.push('REQUIRED_CAPTURES:');
-      for (const c of d.required_captures) {
-        const parts = [c.name, `kind=${c.kind}`];
-        if (c.route) parts.push(`route=${c.route}`);
-        if (c.viewport) parts.push(`viewport=${c.viewport.w}x${c.viewport.h}`);
-        if (c.prompt) parts.push(`recipe=${c.prompt}`);
-        lines.push(parts.join('  '));
-      }
-    }
-
-    if (Array.isArray(d.do_not) && d.do_not.length > 0) {
-      lines.push('');
-      lines.push('DO_NOT:');
-      for (const item of d.do_not) {
-        lines.push(`- ${item}`);
-      }
-    }
-
-    if (Array.isArray(d.when_done) && d.when_done.length > 0) {
-      lines.push('');
-      lines.push('WHEN_DONE:');
-      for (const item of d.when_done) {
-        lines.push(item);
-      }
-    }
-
-    return lines.join('\n');
+    return renderDispatchPrompt(d);
   }
 
   // non-next command — fallback to json with note

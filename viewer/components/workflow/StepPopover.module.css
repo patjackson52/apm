@@ -6,4 +6,6 @@
 .fields dt { color: var(--fg-muted); }
 .fields dd { margin: 0; }
 .reviewers { list-style: none; margin: 0; padding: 0; }
+.prompt > summary { cursor: pointer; color: var(--accent); font-size: 12px; }
+.promptBody { margin: 6px 0; max-height: 220px; overflow: auto; padding: 8px; background: var(--bg-code, var(--bg-surface)); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-mono, monospace); font-size: 11px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; color: var(--fg-code, var(--fg-body)); }
 .foot { margin-top: 10px; }

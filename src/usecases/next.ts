@@ -3,7 +3,7 @@ import type { Ctx } from '../cli/run.js';
 import { ApmError } from '../domain/errors.js';
 import { repos } from '../storage/repos.js';
 import { selectCandidate, type Candidate, type Caller } from '../domain/resolver.js';
-import { buildContract, type ContextRef } from '../domain/contract.js';
+import { buildContract, renderDispatchPrompt, type ContextRef } from '../domain/contract.js';
 import { parseWorkflow, stepById } from '../domain/workflow.js';
 import { toImageView } from '../domain/entities.js';
 import { resolveCurrent } from './session.js';
@@ -275,6 +275,17 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
     };
 
     const stale = !args.acquire;
+
+    // Persist the built dispatch contract on the step run for reference + the viewer UI.
+    // Only on a real (non-preview) dispatch — a stale `next` without --acquire must not mutate.
+    if (args.acquire) {
+      const promptText = renderDispatchPrompt(data);
+      tx.run('UPDATE workflow_step_runs SET dispatch_prompt=? WHERE id=?', promptText, mainPending.id);
+      tx.appendEvent({
+        actorId: args.agent, eventType: 'workflow_run.dispatched', entityType: 'workflow_step_run',
+        entityId: mainPending.id, payload: { workItem: workItemId, run: runRow.id, step: stepDef.id },
+      });
+    }
 
     return { status: 'dispatched', data, session, stale };
   });

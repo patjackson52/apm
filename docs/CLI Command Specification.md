@@ -132,31 +132,41 @@ apm gate answer HG-1 --choice "Option B" --note "Prefer simpler MVP"
 
 ## Agent Prompt Contract
 
-`apm next --format agent` should return:
+`apm next --format agent` returns the dispatched step's contract. `CURRENT_STEP`
+includes the step type in parentheses. The optional `PROMPT` block appears only
+when the workflow step declares a `prompt_id`; it names a stored prompt — fetch its
+body with `apm prompt show <name>`. `REQUIRED_CONTEXT` lines are
+`<ID>@<version> "<title>" — <one_line>` (image refs render as `[image]` with
+`path:`/`alt:` sub-lines). Sections with no content are omitted.
 
 ```text
 WORK_ITEM:
 WI-123
 
 CURRENT_STEP:
-design
+design (agent_prompt)
+
+PROMPT:
+design_solution_v1
 
 ALLOWED_ACTION:
-Create design artifact.
+Produce the design artifact(s) for "design".
 
 REQUIRED_CONTEXT:
-- SPEC-1 v2
-- DEC-4
-- ADR-2
+SPEC-1@2 "Auth spec" — the approved spec
 
 DO_NOT:
-- Write implementation code.
-- Create PR.
+- write implementation code
+- open a PR
 
 WHEN_DONE:
-apm artifact create ...
-apm step complete ...
+apm step complete WR-1 design --artifact-type design --body-file <path> --agent <agent>
 ```
+
+On a real dispatch (`--acquire`), the rendered contract above is also persisted on
+the step run as `dispatch_prompt` (an event `workflow_run.dispatched` is appended),
+so it is retrievable for audit and shown in the viewer UI. A preview `apm next`
+without `--acquire` does not mutate.
 
 # 5. Workflow DSL Specification
 
