@@ -1,7 +1,7 @@
 "use client";
 import { useState } from 'react';
 import type { RunView } from '@apm/types';
-import { useWorkflow, useRuns, useRunSteps } from '@/lib/api/hooks';
+import { useWorkflow, useRuns, useRunSteps, usePromptPanel } from '@/lib/api/hooks';
 import { Skeleton } from '@/components/Skeleton';
 import { buildOverlay } from '@/lib/workflow/runOverlay';
 import { WorkflowGraph } from './WorkflowGraph';
@@ -30,6 +30,7 @@ export function RunGraph({
   const runsQ = useRuns(workItemId);
   const run = pickRun(runsQ.data, runId);
   const stepsQ = useRunSteps(run?.id ?? '');
+  const panelQ = usePromptPanel(workItemId);
   const [selected, setSelected] = useState<string | null>(null);
 
   if (wf.isLoading || runsQ.isLoading) return <Skeleton count={6} h={40} />;
@@ -54,6 +55,7 @@ export function RunGraph({
         <StepPopover
           step={{ id: selectedStep.id, type: selectedStep.type }}
           overlay={overlay.get(selectedStep.id)}
+          dispatch={panelQ.data?.timeline.find((d) => d.step_id === selectedStep.id)}
           onClose={() => setSelected(null)}
         />
       ) : null}

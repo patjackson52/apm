@@ -20,6 +20,7 @@ vi.mock('@/lib/api/hooks', () => ({
   useWorkflow: (...a: unknown[]) => useWorkflow(...a),
   useRuns: (...a: unknown[]) => useRuns(...a),
   useRunSteps: (...a: unknown[]) => useRunSteps(...a),
+  usePromptPanel: () => ({ data: { state: 'no-workflow', headline: null, timeline: [], provenance: null }, isLoading: false, isError: false }),
 }));
 
 import { RunGraph } from './RunGraph';
