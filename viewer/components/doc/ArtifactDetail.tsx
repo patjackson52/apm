@@ -1,4 +1,5 @@
 "use client";
+import Link from 'next/link';
 import { useArtifact, useAdr } from '@/lib/api/hooks';
 import { Skeleton } from '@/components/Skeleton';
 import { ArtifactDoc } from './ArtifactDoc';
@@ -7,7 +8,7 @@ import { AdrDoc } from './AdrDoc';
 function NotFound({ id }: { id: string }) {
   return (
     <p>
-      Artifact <code>{id}</code> not found. <a href="/artifacts">Back to artifacts</a>.
+      Artifact <code>{id}</code> not found. <Link href="/artifacts">Back to artifacts</Link>.
     </p>
   );
 }
