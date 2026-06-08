@@ -1,7 +1,9 @@
 import { envelopeSchema } from '@apm/types';
 import type { ZodType } from 'zod';
 
-export const API_BASE = process.env.NEXT_PUBLIC_APM_API_BASE ?? 'http://127.0.0.1:7842';
+// Same-origin by default: the browser hits the Next server, which proxies /api/* to
+// the daemon (see next.config.ts). Set NEXT_PUBLIC_APM_API_BASE to target it directly.
+export const API_BASE = process.env.NEXT_PUBLIC_APM_API_BASE ?? '';
 
 export class ApiError extends Error {
   constructor(public code: string, message: string, public status?: number) {

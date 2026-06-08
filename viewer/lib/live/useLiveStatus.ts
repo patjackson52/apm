@@ -15,9 +15,15 @@ export function useLiveStatus(thresholdMs?: number): LiveStatus {
   const qc = useQueryClient();
   const isFetching = useIsFetching() > 0;
   const [, setTick] = useState(0);
-  const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+  const [hydrated, setHydrated] = useState(false);
+  // SSR-stable default; the real navigator value is applied on mount. Initializing
+  // from navigator.onLine here would diverge from the server render.
+  const [online, setOnline] = useState(true);
+  const refresh = useCallback(() => { void qc.invalidateQueries(); }, [qc]);
 
   useEffect(() => {
+    setHydrated(true);
+    setOnline(navigator.onLine);
     const bump = () => setTick((n) => n + 1);
     const unsub = qc.getQueryCache().subscribe(bump);
     const interval = setInterval(bump, 1000);
@@ -33,6 +39,12 @@ export function useLiveStatus(thresholdMs?: number): LiveStatus {
     };
   }, [qc]);
 
+  // Connectivity and the query cache are client-only; before hydration they differ
+  // from the server render. Return a deterministic snapshot so the first client
+  // render matches SSR — otherwise React reports a hydration mismatch and
+  // regenerates the tree (which surfaced as a spurious "Offline" flash).
+  if (!hydrated) return { state: 'stale', lastUpdatedAt: null, isFetching: false, refresh };
+
   let lastUpdatedAt: number | null = null;
   let anyError = false;
   for (const q of qc.getQueryCache().getAll()) {
@@ -42,7 +54,6 @@ export function useLiveStatus(thresholdMs?: number): LiveStatus {
   }
 
   const state = deriveLiveState({ isFetching, lastUpdatedAt, anyError, online, now: Date.now(), thresholdMs });
-  const refresh = useCallback(() => { void qc.invalidateQueries(); }, [qc]);
 
   return { state, lastUpdatedAt, isFetching, refresh };
 }

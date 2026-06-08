@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useLiveStatus } from './useLiveStatus';
@@ -35,6 +36,23 @@ describe('useLiveStatus', () => {
     const { result } = renderHook(() => useLiveStatus(), { wrapper: wrapper(client) });
     act(() => result.current.refresh());
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a deterministic SSR-stable snapshot before hydration (no cache/connectivity leak)', () => {
+    // The pre-hydration (server) render must not depend on the query cache or
+    // navigator; otherwise the first client render diverges from SSR and React
+    // regenerates the tree (the spurious "Offline" flash). renderToStaticMarkup
+    // never runs effects, so `hydrated` stays false — the SSR branch.
+    const client = new QueryClient();
+    client.setQueryData(['x'], 1); // fresh cache data that WOULD imply "live"…
+    function Probe() {
+      const s = useLiveStatus();
+      return <i>{`${s.state}:${String(s.lastUpdatedAt)}:${String(s.isFetching)}`}</i>;
+    }
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={client}><Probe /></QueryClientProvider>,
+    );
+    expect(html).toContain('stale:null:false'); // …yet SSR is always the stable snapshot
   });
 
   it('cleans up without throwing on unmount', () => {
