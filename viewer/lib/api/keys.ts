@@ -1,4 +1,4 @@
-import type { WorkFilters, EventsFilter } from './endpoints';
+import type { WorkFilters, EventsFilter, ArtifactFilters } from './endpoints';
 
 /** Query-key factory — stable, serializable arrays. */
 export const qk = {
@@ -11,6 +11,7 @@ export const qk = {
   runs: (id: string) => ['work', id, 'runs'] as const,
   steps: (runId: string) => ['runs', runId, 'steps'] as const,
   artifact: (id: string) => ['artifact', id] as const,
+  artifacts: (f: ArtifactFilters = {}) => ['artifacts', f] as const,
   workflows: () => ['workflows'] as const,
   workflow: (id: string) => ['workflows', id] as const,
   decisions: (wi?: string) => ['decisions', wi ?? null] as const,

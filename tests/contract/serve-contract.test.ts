@@ -62,6 +62,7 @@ describe('apm serve ↔ @apm/types contract', () => {
   it('/api/work/:id/children (page)', () => check(`/api/work/${wiId}/children`, pageSchema(WorkItemViewSchema)));
   it('/api/work/:id/blockers (base WorkBlockers)', () => check(`/api/work/${wiId}/blockers`, WorkBlockersSchema));
   it('/api/work/:id/artifacts (page)', () => check(`/api/work/${wiId}/artifacts`, pageSchema(ArtifactViewSchema)));
+  it('/api/artifacts (page)', () => check('/api/artifacts', pageSchema(ArtifactViewSchema)));
   it('/api/work/:id/runs (array)', () => check(`/api/work/${wiId}/runs`, z.array(RunViewSchema)));
   it('/api/runs/:id/steps (array)', () => check(`/api/runs/${runId}/steps`, z.array(StepRunViewSchema)));
   it('/api/workflows (lean list)', () => check('/api/workflows', z.array(WorkflowDefSummarySchema)));
