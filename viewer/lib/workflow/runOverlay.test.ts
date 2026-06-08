@@ -5,7 +5,7 @@ import type { StepRunView } from '@apm/types';
 const sr = (o: Partial<StepRunView> & { id: string; step_id: string }): StepRunView => ({
   run_id: 'WR-1', parent_step_run_id: null, role: null, status: 'completed',
   verdict: null, review_round: 1, started_at: '2026-01-01', completed_at: null,
-  output_artifact_id: null, failure_reason: null, dispatch_prompt: null, ...o,
+  output_artifact_id: null, failure_reason: null, dispatch_prompt: null, prompt_definition_id: null, ...o,
 });
 
 describe('buildOverlay', () => {

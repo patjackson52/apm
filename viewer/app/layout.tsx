@@ -1,5 +1,7 @@
 import './tokens.css';
 import './globals.css';
+import './ds/primitives.css';
+import './ds/prompts.css';
 import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
 import { Providers } from './providers';
