@@ -13,7 +13,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        {/* Browsers blank the nonce attribute out of the DOM after parsing, so the
+            client reads nonce="" while SSR emitted the real value — a hydration
+            mismatch that otherwise regenerates the whole tree. The nonce must stay
+            in the SSR HTML to satisfy CSP; suppress the diff on this element only. */}
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>
       <body>
         <Providers>

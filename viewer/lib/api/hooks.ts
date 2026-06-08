@@ -30,6 +30,7 @@ export const useWorkArtifacts = (id: string, o?: Opt) => useApiQuery(qk.workArti
 export const useRuns = (id: string, o?: Opt) => useApiQuery(qk.runs(id), ep.workRuns.path(id), ep.workRuns.schema, VOLATILE, o);
 export const useRunSteps = (runId: string, o?: Opt) => useApiQuery(qk.steps(runId), ep.runSteps.path(runId), ep.runSteps.schema, VOLATILE, o);
 export const useArtifact = (id: string, o?: Opt) => useApiQuery(qk.artifact(id), ep.artifact.path(id), ep.artifact.schema, false, o);
+export const useArtifacts = (f: import('./endpoints').ArtifactFilters = {}, o?: Opt) => useApiQuery(qk.artifacts(f), ep.artifacts.path(f), ep.artifacts.schema, SEMI, o);
 export const useWorkflows = (o?: Opt) => useApiQuery(qk.workflows(), ep.workflows.path(), ep.workflows.schema, false, o);
 export const useWorkflow = (id: string, o?: Opt) => useApiQuery(qk.workflow(id), ep.workflow.path(id), ep.workflow.schema, false, o);
 export const useDecisions = (wi?: string, o?: Opt) => useApiQuery(qk.decisions(wi), ep.decisions.path(wi), ep.decisions.schema, false, o);

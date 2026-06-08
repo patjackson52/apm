@@ -70,6 +70,31 @@ export function list(ctx: Ctx, a: ListArgs): Page<ArtifactView> {
   });
 }
 
+export interface ListAllArgs { limit?: number; offset?: number; type?: string; }
+/** Project-wide artifact list: the current (highest) version of every non-image
+ *  lineage, newest first. Bodies are omitted to keep the list payload small. */
+export function listAll(ctx: Ctx, a: ListAllArgs = {}): Page<ArtifactView> {
+  const limit = a.limit ?? 50; const offset = a.offset ?? 0;
+  return ctx.storage.transaction('deferred', (tx) => {
+    const params: unknown[] = [];
+    let typeClause = '';
+    if (a.type) { typeClause = 'AND a.type = ?'; params.push(a.type); }
+    const rows = tx.all<any>(
+      `SELECT a.* FROM artifacts a
+       WHERE a.type != 'image'
+         AND a.version = (SELECT MAX(b.version) FROM artifacts b WHERE b.root_artifact_id = a.root_artifact_id)
+         ${typeClause}
+       ORDER BY a.created_at DESC, a.id DESC`,
+      ...params,
+    );
+    const paged = rows.slice(offset, offset + limit);
+    return {
+      items: paged.map((row: any) => toArtifactView({ ...row, body: undefined }, workItemForRoot(tx, row.root_artifact_id))),
+      page: { total: rows.length, limit, offset, has_more: offset + paged.length < rows.length },
+    };
+  });
+}
+
 function transition(ctx: Ctx, id: string, from: string[], to: string): ArtifactView {
   return ctx.storage.transaction('immediate', (tx) => {
     const r = repos(tx);

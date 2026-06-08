@@ -49,4 +49,10 @@ describe('AppShell', () => {
     renderWithClient(<AppShell><Boom /></AppShell>);
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
+  it('makes the main landmark programmatically focusable for route-change focus', () => {
+    // tabIndex is rendered in JSX (consistent SSR+client) rather than imperatively
+    // set on the page heading, which avoids a hydration mismatch.
+    renderWithClient(<AppShell><p>content</p></AppShell>);
+    expect(screen.getByRole('main')).toHaveAttribute('tabindex', '-1');
+  });
 });

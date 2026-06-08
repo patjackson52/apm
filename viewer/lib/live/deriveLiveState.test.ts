@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { deriveLiveState, type LiveInput } from './deriveLiveState';
 
-const base: LiveInput = { isFetching: false, lastUpdatedAt: 1000, anyError: false, online: true, now: 1000, thresholdMs: 15000 };
+const base: LiveInput = { isFetching: false, lastUpdatedAt: 1000, connectionDown: false, online: true, now: 1000, thresholdMs: 15000 };
 
 describe('deriveLiveState', () => {
   it('live when online + a fresh update', () => {
@@ -16,8 +16,12 @@ describe('deriveLiveState', () => {
   it('stale when there is no successful update yet', () => {
     expect(deriveLiveState({ ...base, lastUpdatedAt: null })).toBe('stale');
   });
-  it('offline on error', () => {
-    expect(deriveLiveState({ ...base, anyError: true })).toBe('offline');
+  it('offline when the connection is currently down', () => {
+    expect(deriveLiveState({ ...base, connectionDown: true })).toBe('offline');
+  });
+  it('stays live when a fresh success coexists with a stale idle error', () => {
+    // connectionDown already encodes recency, so a fresh poll keeps us live.
+    expect(deriveLiveState({ ...base, connectionDown: false, now: 5000, lastUpdatedAt: 4000 })).toBe('live');
   });
   it('offline when the browser is offline', () => {
     expect(deriveLiveState({ ...base, online: false })).toBe('offline');

@@ -44,6 +44,7 @@ export const ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/work/:id/blockers', run: ({ ctx, params }) => work.blockers(ctx, params.id) },
   { method: 'GET', pattern: '/api/work/:id/artifacts', run: ({ ctx, params, query }) => artifact.list(ctx, { workItem: params.id, limit: num(query, 'limit'), offset: num(query, 'offset') }) },
   { method: 'GET', pattern: '/api/work/:id/runs', run: ({ ctx, params }) => workflow.runsForWorkItem(ctx, params.id) },
+  { method: 'GET', pattern: '/api/artifacts', run: ({ ctx, query }) => artifact.listAll(ctx, { limit: num(query, 'limit'), offset: num(query, 'offset'), type: str(query, 'type') }) },
   { method: 'GET', pattern: '/api/artifacts/:id', run: ({ ctx, params }) => artifact.show(ctx, params.id) },
   { method: 'GET', pattern: '/api/workflows', run: ({ ctx }) => workflow.list(ctx) },
   { method: 'GET', pattern: '/api/workflows/:nameOrId', run: ({ ctx, params }) => workflow.show(ctx, params.nameOrId) },

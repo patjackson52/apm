@@ -74,4 +74,27 @@ describe('artifact usecases', () => {
     });
     expect(a.created_at).toBeTruthy();
   });
+
+  it('listAll returns the current version of every lineage, newest first, bodies omitted', () => {
+    const wi = work.create(ctx(), { type: 'feature', title: 'F', agent: 'claude' });
+    const spec = artifact.create(ctx(), { workItem: wi.id, type: 'spec', title: 'Spec', body: 'v1', agent: 'claude' });
+    artifact.revise(ctx(), spec.id, 'v2', 'claude'); // supersede -> only current should appear
+    artifact.create(ctx(), { workItem: wi.id, type: 'plan', title: 'Plan', body: 'p', agent: 'claude' });
+
+    const page = artifact.listAll(ctx());
+    expect(page.items).toHaveLength(2); // one row per lineage, not per version
+    expect(page.items.every((x) => x.body === null)).toBe(true); // list omits bodies
+    const specRow = page.items.find((x) => x.root === spec.id)!;
+    expect(specRow.version).toBe(2); // current version, not v1
+    expect(specRow.work_item).toBe(wi.id);
+  });
+
+  it('listAll filters by type', () => {
+    const wi = work.create(ctx(), { type: 'feature', title: 'F', agent: 'claude' });
+    artifact.create(ctx(), { workItem: wi.id, type: 'spec', title: 'Spec', body: 'x', agent: 'claude' });
+    artifact.create(ctx(), { workItem: wi.id, type: 'plan', title: 'Plan', body: 'y', agent: 'claude' });
+    const plans = artifact.listAll(ctx(), { type: 'plan' });
+    expect(plans.items).toHaveLength(1);
+    expect(plans.items[0]!.type).toBe('plan');
+  });
 });

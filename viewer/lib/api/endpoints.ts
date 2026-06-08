@@ -15,6 +15,7 @@ const qs = (params: Record<string, string | number | undefined>): string => {
 };
 
 export interface WorkFilters { status?: string; type?: string; limit?: number; offset?: number; }
+export interface ArtifactFilters { type?: string; limit?: number; offset?: number; }
 
 /** The single endpoint→schema contract surface (mirrors the apm-core contract test). */
 export const ep = {
@@ -27,6 +28,7 @@ export const ep = {
   workRuns: { path: (id: string) => `/api/work/${id}/runs`, schema: z.array(RunViewSchema) },
   runSteps: { path: (runId: string) => `/api/runs/${runId}/steps`, schema: z.array(StepRunViewSchema) },
   artifact: { path: (id: string) => `/api/artifacts/${id}`, schema: ArtifactViewSchema },
+  artifacts: { path: (f: ArtifactFilters = {}) => `/api/artifacts${qs({ type: f.type, limit: f.limit, offset: f.offset })}`, schema: pageSchema(ArtifactViewSchema) },
   workflows: { path: () => '/api/workflows', schema: z.array(WorkflowDefSummarySchema) },
   workflow: { path: (id: string) => `/api/workflows/${id}`, schema: WorkflowDefViewSchema },
   decisions: { path: (workItem?: string) => `/api/decisions${qs({ 'work-item': workItem })}`, schema: z.array(DecisionViewSchema) },

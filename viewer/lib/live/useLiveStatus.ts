@@ -15,34 +15,52 @@ export function useLiveStatus(thresholdMs?: number): LiveStatus {
   const qc = useQueryClient();
   const isFetching = useIsFetching() > 0;
   const [, setTick] = useState(0);
-  const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+  const [hydrated, setHydrated] = useState(false);
+  // SSR-stable default; the real navigator value is applied on mount. Initializing
+  // from navigator.onLine here would diverge from the server render.
+  const [online, setOnline] = useState(true);
+  const refresh = useCallback(() => { void qc.invalidateQueries(); }, [qc]);
 
   useEffect(() => {
-    const bump = () => setTick((n) => n + 1);
-    const unsub = qc.getQueryCache().subscribe(bump);
-    const interval = setInterval(bump, 1000);
+    setHydrated(true);
+    setOnline(navigator.onLine);
+    // A 1s tick re-evaluates freshness over time. We deliberately do NOT subscribe
+    // to the query cache: that callback fires synchronously while other components
+    // render their useQuery, causing "setState while rendering" on this component.
+    // useIsFetching() already re-renders us on every fetch start/stop, which covers
+    // live/error transitions; the tick covers the passage into "stale".
+    const interval = setInterval(() => setTick((n) => n + 1), 1000);
     const goOnline = () => setOnline(true);
     const goOffline = () => setOnline(false);
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
     return () => {
-      unsub();
       clearInterval(interval);
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
     };
-  }, [qc]);
+  }, []);
 
+  // Connectivity and the query cache are client-only; before hydration they differ
+  // from the server render. Return a deterministic snapshot so the first client
+  // render matches SSR — otherwise React reports a hydration mismatch and
+  // regenerates the tree (which surfaced as a spurious "Offline" flash).
+  if (!hydrated) return { state: 'stale', lastUpdatedAt: null, isFetching: false, refresh };
+
+  // Track the freshest success and the freshest error across all queries. The
+  // connection is "down" only when the most recent fetch settled as an error —
+  // an idle non-polling query that errored once long ago must NOT pin us offline
+  // while other queries keep polling successfully.
   let lastUpdatedAt: number | null = null;
-  let anyError = false;
+  let lastErrorAt = 0;
   for (const q of qc.getQueryCache().getAll()) {
     const u = q.state.dataUpdatedAt;
     if (u > 0 && (lastUpdatedAt === null || u > lastUpdatedAt)) lastUpdatedAt = u;
-    if (q.state.status === 'error') anyError = true;
+    if (q.state.status === 'error' && q.state.errorUpdatedAt > lastErrorAt) lastErrorAt = q.state.errorUpdatedAt;
   }
+  const connectionDown = lastErrorAt > 0 && lastErrorAt > (lastUpdatedAt ?? 0);
 
-  const state = deriveLiveState({ isFetching, lastUpdatedAt, anyError, online, now: Date.now(), thresholdMs });
-  const refresh = useCallback(() => { void qc.invalidateQueries(); }, [qc]);
+  const state = deriveLiveState({ isFetching, lastUpdatedAt, connectionDown, online, now: Date.now(), thresholdMs });
 
   return { state, lastUpdatedAt, isFetching, refresh };
 }
