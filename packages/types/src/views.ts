@@ -90,7 +90,44 @@ export const StepRunViewSchema = z.object({
   output_artifact_id: z.string().nullable(),
   failure_reason: z.string().nullable(),
   dispatch_prompt: z.string().nullable(),
+  prompt_definition_id: z.string().nullable(),
 }).strict();
+
+// --- Prompts ---
+export const PromptSummaryViewSchema = z.object({
+  name: z.string(), latest_version: z.number(), version_count: z.number(),
+  builtin: z.boolean(), summary: z.string(), updated_at: z.string(),
+  where_defs: z.number(), where_runs: z.number(),
+}).strict();
+export type PromptSummaryView = z.infer<typeof PromptSummaryViewSchema>;
+
+export const PromptVersionViewSchema = z.object({ version: z.number(), body: z.string(), created_at: z.string() }).strict();
+export const PromptDetailViewSchema = PromptSummaryViewSchema.extend({ versions: z.array(PromptVersionViewSchema) }).strict();
+export type PromptDetailView = z.infer<typeof PromptDetailViewSchema>;
+
+export const WhereUsedRowSchema = z.object({
+  run: z.string(), work_item: z.string(), version: z.number(), status: z.string(), at: z.string().nullable(),
+}).strict();
+
+export const StructuredDispatchSchema = z.object({
+  step_id: z.string(), step_type: z.string(), status: z.string(),
+  prompt_name: z.string().nullable(), prompt_version: z.number().nullable(), latest_version: z.number().nullable(),
+  body: z.string().nullable(),
+  scaffold: z.object({
+    allowed_action: z.string().nullable(),
+    required_context: z.array(z.string()), do_not: z.array(z.string()), when_done: z.array(z.string()),
+  }).strict(),
+  raw: z.string(), at: z.string().nullable(),
+}).strict();
+export type StructuredDispatch = z.infer<typeof StructuredDispatchSchema>;
+
+export const PromptPanelViewSchema = z.object({
+  state: z.enum(['pre-run', 'active', 'completed', 'blocked', 'no-prompt', 'no-workflow']),
+  headline: StructuredDispatchSchema.nullable(),
+  timeline: z.array(StructuredDispatchSchema),
+  provenance: z.object({ name: z.string(), version: z.number(), latest: z.number() }).strict().nullable(),
+}).strict();
+export type PromptPanelView = z.infer<typeof PromptPanelViewSchema>;
 
 export const ArtifactViewSchema = z.object({
   id: z.string(),

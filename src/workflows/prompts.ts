@@ -80,3 +80,6 @@ export const BUILTIN_PROMPTS: BuiltinPrompt[] = [
     ].join('\n'),
   },
 ];
+
+/** Names of the seeded built-in prompts — used to badge prompts as built-in vs custom. */
+export const BUILTIN_PROMPT_NAMES = new Set(BUILTIN_PROMPTS.map((p) => p.name));
