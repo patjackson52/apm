@@ -22,6 +22,24 @@ describe('useLiveStatus', () => {
     expect(result.current.lastUpdatedAt).not.toBeNull();
   });
 
+  it('stays live when an idle query errored long ago but a fresh success exists', () => {
+    const client = new QueryClient();
+    client.setQueryData(['fresh'], 1); // success at "now"
+    const q = client.getQueryCache().build(client, { queryKey: ['stale-bad'] });
+    q.setState({ status: 'error', error: new Error('x'), errorUpdatedAt: 1, fetchStatus: 'idle' });
+    const { result } = renderHook(() => useLiveStatus(), { wrapper: wrapper(client) });
+    expect(result.current.state).toBe('live'); // old error must NOT pin offline
+  });
+
+  it('is offline when the most recent settle is an error', () => {
+    const client = new QueryClient();
+    client.setQueryData(['old'], 1);
+    const q = client.getQueryCache().build(client, { queryKey: ['bad'] });
+    q.setState({ status: 'error', error: new Error('x'), errorUpdatedAt: Date.now() + 10_000, fetchStatus: 'idle' });
+    const { result } = renderHook(() => useLiveStatus(), { wrapper: wrapper(client) });
+    expect(result.current.state).toBe('offline');
+  });
+
   it('flips to offline on a window offline event', () => {
     const client = new QueryClient();
     client.setQueryData(['x'], 1);

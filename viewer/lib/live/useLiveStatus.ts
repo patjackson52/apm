@@ -47,15 +47,20 @@ export function useLiveStatus(thresholdMs?: number): LiveStatus {
   // regenerates the tree (which surfaced as a spurious "Offline" flash).
   if (!hydrated) return { state: 'stale', lastUpdatedAt: null, isFetching: false, refresh };
 
+  // Track the freshest success and the freshest error across all queries. The
+  // connection is "down" only when the most recent fetch settled as an error —
+  // an idle non-polling query that errored once long ago must NOT pin us offline
+  // while other queries keep polling successfully.
   let lastUpdatedAt: number | null = null;
-  let anyError = false;
+  let lastErrorAt = 0;
   for (const q of qc.getQueryCache().getAll()) {
     const u = q.state.dataUpdatedAt;
     if (u > 0 && (lastUpdatedAt === null || u > lastUpdatedAt)) lastUpdatedAt = u;
-    if (q.state.status === 'error') anyError = true;
+    if (q.state.status === 'error' && q.state.errorUpdatedAt > lastErrorAt) lastErrorAt = q.state.errorUpdatedAt;
   }
+  const connectionDown = lastErrorAt > 0 && lastErrorAt > (lastUpdatedAt ?? 0);
 
-  const state = deriveLiveState({ isFetching, lastUpdatedAt, anyError, online, now: Date.now(), thresholdMs });
+  const state = deriveLiveState({ isFetching, lastUpdatedAt, connectionDown, online, now: Date.now(), thresholdMs });
 
   return { state, lastUpdatedAt, isFetching, refresh };
 }
