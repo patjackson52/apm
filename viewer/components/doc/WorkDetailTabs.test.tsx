@@ -16,6 +16,8 @@ vi.mock('@/lib/api/hooks', () => ({
   useWorkArtifacts: (...a: unknown[]) => useWorkArtifacts(...a),
   useDecisions: (...a: unknown[]) => useDecisions(...a),
   useAdrs: (...a: unknown[]) => useAdrs(...a),
+  // PromptPanel is now mounted above the tabs — stub its hook to a benign empty state.
+  usePromptPanel: () => ({ data: { state: 'no-workflow', headline: null, timeline: [], provenance: null }, isLoading: false, isError: false }),
 }));
 
 import { WorkDetailTabs } from './WorkDetailTabs';

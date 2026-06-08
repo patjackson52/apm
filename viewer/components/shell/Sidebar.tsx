@@ -8,6 +8,7 @@ const NAV = [
   { href: '/', label: 'Dashboard' },
   { href: '/work', label: 'Work items' },
   { href: '/workflows', label: 'Workflows' },
+  { href: '/prompts', label: 'Prompts' },
   { href: '/artifacts', label: 'Artifacts' },
   { href: '/blockers', label: 'Blockers & Gates' },
   { href: '/sessions', label: 'Sessions' },
