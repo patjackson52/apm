@@ -34,4 +34,24 @@ describe('prompt usecases', () => {
   it('revise rejects an unknown name', () => {
     expect(() => prompt.revise(ctx(), { name: 'nope', body: 'x' })).toThrow(/not found/i);
   });
+
+  it('listSummaries returns latest-per-name with derived summary', () => {
+    prompt.create(ctx(), { name: 'a', body: 'A one\nA two' });
+    prompt.revise(ctx(), { name: 'a', body: 'A three' });
+    const a = prompt.listSummaries(ctx()).find((x) => x.name === 'a')!;
+    expect(a).toMatchObject({ latest_version: 2, version_count: 2, summary: 'A three' });
+  });
+
+  it('detail returns versions newest-first', () => {
+    prompt.create(ctx(), { name: 'a', body: 'v1' });
+    prompt.revise(ctx(), { name: 'a', body: 'v2' });
+    expect(prompt.detail(ctx(), 'a').versions.map((v) => v.version)).toEqual([2, 1]);
+  });
+
+  it('usage returns a paginated (empty) page for an unused prompt', () => {
+    prompt.create(ctx(), { name: 'a', body: 'x' });
+    const u = prompt.usage(ctx(), 'a', 20, 0);
+    expect(u.items).toEqual([]);
+    expect(u.page).toMatchObject({ total: 0, limit: 20, offset: 0, has_more: false });
+  });
 });

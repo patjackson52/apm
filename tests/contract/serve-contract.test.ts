@@ -19,6 +19,7 @@ import {
   WorkItemViewSchema, RunViewSchema, StepRunViewSchema, ArtifactViewSchema,
   DecisionViewSchema, BlockerViewSchema, EnrichedBlockerViewSchema, WorkBlockersSchema,
   LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, StatusViewSchema, EventViewSchema, SessionViewSchema, ProjectViewSchema, SearchResultViewSchema,
+  PromptSummaryViewSchema, PromptDetailViewSchema, PromptVersionViewSchema, WhereUsedRowSchema, PromptPanelViewSchema,
 } from '@apm/types';
 
 const clock = fixedClock('2026-06-03T12:00:00.000Z');
@@ -69,6 +70,11 @@ describe('apm serve ↔ @apm/types contract', () => {
   it('/api/workflows/:id (full)', () => check('/api/workflows/feature_delivery', WorkflowDefViewSchema));
   it('/api/decisions (array)', () => check('/api/decisions', z.array(DecisionViewSchema)));
   it('/api/adr (page)', () => check('/api/adr', pageSchema(ArtifactViewSchema)));
+  it('/api/prompts (array of summaries)', () => check('/api/prompts', z.array(PromptSummaryViewSchema)));
+  it('/api/prompts/:name (detail)', () => check('/api/prompts/brainstorm_feature_v1', PromptDetailViewSchema));
+  it('/api/prompts/:name/versions/:v', () => check('/api/prompts/brainstorm_feature_v1/versions/1', PromptVersionViewSchema));
+  it('/api/prompts/:name/usage (page)', () => check('/api/prompts/brainstorm_feature_v1/usage', pageSchema(WhereUsedRowSchema)));
+  it('/api/work/:id/prompt-panel (structured panel)', () => check(`/api/work/${wiId}/prompt-panel`, PromptPanelViewSchema));
   it('/api/blockers (enriched array)', () => check('/api/blockers', z.array(EnrichedBlockerViewSchema)));
   it('/api/gates (enriched array)', () => check('/api/gates', z.array(EnrichedBlockerViewSchema)));
   it('/api/leases ({items}, no page wrapper)', () => check('/api/leases', z.object({ items: z.array(LeaseViewSchema) }).strict()));
