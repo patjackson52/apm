@@ -27,4 +27,8 @@ export const qk = {
   workImages: (id: string) => ['work', id, 'images'] as const,
   image: (id: string) => ['image', id] as const,
   imageVersions: (id: string) => ['image', id, 'versions'] as const,
+  prompts: () => ['prompts'] as const,
+  prompt: (name: string) => ['prompts', name] as const,
+  promptUsage: (name: string, f: object = {}) => ['prompts', name, 'usage', f] as const,
+  promptPanel: (id: string) => ['work', id, 'prompt-panel'] as const,
 };

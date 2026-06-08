@@ -49,3 +49,8 @@ export const useImage = (id: string, o?: Opt) =>
   useApiQuery(qk.image(id), ep.image.path(id), ep.image.schema, SEMI, o);
 export const useImageVersions = (id: string, o?: Opt) =>
   useApiQuery(qk.imageVersions(id), ep.imageVersions.path(id), ep.imageVersions.schema, SEMI, o);
+export const usePrompts = (o?: Opt) => useApiQuery(qk.prompts(), ep.prompts.path(), ep.prompts.schema, SEMI, o);
+export const usePrompt = (n: string, o?: Opt) => useApiQuery(qk.prompt(n), ep.prompt.path(n), ep.prompt.schema, false, o);
+export const usePromptUsage = (n: string, f: { limit?: number; offset?: number } = {}, o?: Opt) =>
+  useApiQuery(qk.promptUsage(n, f), ep.promptUsage.path(n, f), ep.promptUsage.schema, false, o);
+export const usePromptPanel = (id: string, o?: Opt) => useApiQuery(qk.promptPanel(id), ep.promptPanel.path(id), ep.promptPanel.schema, VOLATILE, o);

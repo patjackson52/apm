@@ -5,6 +5,7 @@ import {
   ArtifactViewSchema, DecisionViewSchema, WorkBlockersSchema, EnrichedBlockerViewSchema,
   LeaseViewSchema, WorkflowDefSummarySchema, WorkflowDefViewSchema, EventViewSchema, SessionViewSchema, ProjectViewSchema, SearchResultViewSchema,
   ImageViewSchema,
+  PromptSummaryViewSchema, PromptDetailViewSchema, PromptVersionViewSchema, WhereUsedRowSchema, PromptPanelViewSchema,
 } from '@apm/types';
 
 const qs = (params: Record<string, string | number | undefined>): string => {
@@ -44,6 +45,11 @@ export const ep = {
   workImages: { path: (id: string) => `/api/work/${id}/images`, schema: pageSchema(ImageViewSchema) },
   image: { path: (id: string) => `/api/images/${id}`, schema: ImageViewSchema },
   imageVersions: { path: (id: string) => `/api/images/${id}/versions`, schema: z.object({ items: z.array(ImageViewSchema) }) },
+  prompts: { path: () => '/api/prompts', schema: z.array(PromptSummaryViewSchema) },
+  prompt: { path: (name: string) => `/api/prompts/${encodeURIComponent(name)}`, schema: PromptDetailViewSchema },
+  promptVersion: { path: (name: string, v: number) => `/api/prompts/${encodeURIComponent(name)}/versions/${v}`, schema: PromptVersionViewSchema },
+  promptUsage: { path: (name: string, f: { limit?: number; offset?: number } = {}) => `/api/prompts/${encodeURIComponent(name)}/usage${qs({ limit: f.limit, offset: f.offset })}`, schema: pageSchema(WhereUsedRowSchema) },
+  promptPanel: { path: (id: string) => `/api/work/${id}/prompt-panel`, schema: PromptPanelViewSchema },
 } as const;
 
 export interface EventsFilter { entityType?: string; entityId?: string; limit?: number; offset?: number; }
