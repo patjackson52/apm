@@ -4,9 +4,17 @@ const SERVE = 'http://127.0.0.1:7842';
 
 export function middleware(req: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  // Next.js dev (HMR / React Fast Refresh) evaluates strings, which a strict CSP
+  // blocks — crashing the client bundle (empty dashboard + stuck "Offline").
+  // Allow eval in dev ONLY; production builds are eval-free, so the strict
+  // nonce + strict-dynamic posture (PLAN.md security checklist) is preserved there.
+  const scriptSrc =
+    process.env.NODE_ENV === 'production'
+      ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
+      : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`;
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' ${SERVE}`,
     `connect-src 'self' ${SERVE}`,
