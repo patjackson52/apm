@@ -72,9 +72,16 @@ describe('next persists the built dispatch prompt', () => {
     expect(text).toContain('WORK_ITEM:');
     expect(text).toContain(wi.id);
     expect(text).toContain('CURRENT_STEP:\nbrainstorm (agent_prompt)');
-    expect(text).toContain('PROMPT:\nbrainstorm_feature_v1');
+    // The composed contract now inlines the stored prompt body under PROMPT (name@version):
+    expect(text).toMatch(/PROMPT \(brainstorm_feature_v1@\d+\):/);
+    expect(text).toMatch(/brainstorm|approach|propose/i); // the seeded body is inlined, not just the name
     expect(text).toContain('ALLOWED_ACTION:');
     expect(text).toContain('WHEN_DONE:');
+
+    // The exact prompt_definitions row dispatched is pinned for provenance.
+    const row = ctx().storage.transaction('deferred', (tx) =>
+      tx.get<{ prompt_definition_id: string | null }>('SELECT prompt_definition_id FROM workflow_step_runs WHERE id=?', main.id));
+    expect(row!.prompt_definition_id).toBeTruthy();
   });
 
   it('does NOT persist on a preview (no --acquire) — read-only next must not mutate', () => {

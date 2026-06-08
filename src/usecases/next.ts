@@ -258,12 +258,25 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
       lease = { id: leaseRow.id, expires_at: leaseRow.expires_at };
     }
 
+    // Resolve the pinned prompt version + body so the contract carries the full text
+    // (and we can snapshot exactly which prompt_definitions row was dispatched).
+    let promptDefId: string | null = null;
+    let promptName: string | null = null;
+    let promptVersion: number | null = null;
+    let promptBody: string | null = null;
+    if (stepDef.prompt_id) {
+      const pd = r.prompts.byName(stepDef.prompt_id);
+      if (pd) { promptDefId = pd.id; promptName = pd.name; promptVersion = pd.version; promptBody = pd.body; }
+    }
+
     const data: any = {
       status: 'dispatched',
       work_item: workItemId,
       run: runRow.id,
       step: { id: stepDef.id, type: stepDef.type },
-      prompt_id: stepDef.prompt_id ?? null,
+      prompt_name: promptName,
+      prompt_version: promptVersion,
+      prompt_body: promptBody,
       allowed_action: contract.allowed_action,
       required_context: requiredContext,
       required_captures: requiredCaptures,
@@ -280,10 +293,11 @@ export function next(ctx: Ctx, args: NextArgs): NextResult {
     // Only on a real (non-preview) dispatch — a stale `next` without --acquire must not mutate.
     if (args.acquire) {
       const promptText = renderDispatchPrompt(data);
-      tx.run('UPDATE workflow_step_runs SET dispatch_prompt=? WHERE id=?', promptText, mainPending.id);
+      tx.run('UPDATE workflow_step_runs SET dispatch_prompt=?, prompt_definition_id=? WHERE id=?', promptText, promptDefId, mainPending.id);
       tx.appendEvent({
         actorId: args.agent, eventType: 'workflow_run.dispatched', entityType: 'workflow_step_run',
-        entityId: mainPending.id, payload: { workItem: workItemId, run: runRow.id, step: stepDef.id },
+        entityId: mainPending.id,
+        payload: { workItem: workItemId, run: runRow.id, step: stepDef.id, prompt: promptName ? `${promptName}@${promptVersion}` : null },
       });
     }
 
