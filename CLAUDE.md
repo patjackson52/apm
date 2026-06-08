@@ -31,7 +31,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Blockers: `apm blocker create <wi> --type <t> --reason <r> --agent <a>` · `blocker show <id>` (incl. linked bug images) · `blocker resolve <id> --resolution <r> --agent <a>`
 - Gates: `apm gate list [--work-item <wi>]` · `gate answer <blockerId> --choice <c> [--note <n>] --agent <a>`
 - Policy: `apm policy create --scope-type <t> [--scope-id <id>] --policy-file <f>` · `policy list` · `policy show [--work-item <wi>]`
-- Prompts: `apm prompt create --name <n> --body-file <f>` · `prompt list` · `prompt show <name>`
+- Prompts: `apm prompt create --name <n> --body-file <f>` (rejects an existing name) · `prompt revise <name> --body-file <f>` (new version) · `prompt list` · `prompt show <name> [--version N]`. On dispatch (`apm next --acquire`) the resolved stored prompt **body is inlined** into the contract under `PROMPT (name@version):`, the exact `prompt_definitions` row is pinned via `workflow_step_runs.prompt_definition_id`, and the verbatim composed text is stored in `dispatch_prompt`. Read API: `/api/prompts`, `/api/prompts/:name`, `/api/prompts/:name/versions/:v`, `/api/prompts/:name/usage`, `/api/work/:id/prompt-panel` (structured, state-aware).
 - Work (extended): `apm work current <id>` · `work blockers <id>`
 - Agent loop: `apm next --agent <a> --session current --acquire --format agent` — dispatches the next allowed action; exit 0 dispatched, 3 drained, 10 idle/retry, 20 awaiting-human
 - Status: `apm status` — global dashboard (counts, active leases, open blockers, awaiting-human, active runs)

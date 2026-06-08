@@ -146,8 +146,9 @@ WI-123
 CURRENT_STEP:
 design (agent_prompt)
 
-PROMPT:
-design_solution_v1
+PROMPT (design_solution_v1@2):
+Using the approved spec, produce the design artifact: component boundaries,
+key interfaces, data shapes, and the failure modes you considered.
 
 ALLOWED_ACTION:
 Produce the design artifact(s) for "design".
@@ -163,10 +164,15 @@ WHEN_DONE:
 apm step complete WR-1 design --artifact-type design --body-file <path> --agent <agent>
 ```
 
-On a real dispatch (`--acquire`), the rendered contract above is also persisted on
-the step run as `dispatch_prompt` (an event `workflow_run.dispatched` is appended),
-so it is retrievable for audit and shown in the viewer UI. A preview `apm next`
-without `--acquire` does not mutate.
+The `PROMPT` block inlines the resolved stored prompt **body** (the runner no longer
+needs a separate `apm prompt show`); the header carries `name@version`. On a real
+dispatch (`--acquire`), the rendered contract above is persisted verbatim on the step
+run as `dispatch_prompt`, the exact `prompt_definitions` row is pinned via
+`workflow_step_runs.prompt_definition_id`, and a `workflow_run.dispatched` event is
+appended (payload includes `name@version`) — so it is retrievable for audit and shown
+in the viewer UI. A preview `apm next` without `--acquire` composes the same text but
+does not mutate. The viewer reads `/api/work/:id/prompt-panel` for the state-aware,
+structured (scaffold-vs-body) view.
 
 # 5. Workflow DSL Specification
 
