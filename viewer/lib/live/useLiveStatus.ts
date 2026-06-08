@@ -24,20 +24,22 @@ export function useLiveStatus(thresholdMs?: number): LiveStatus {
   useEffect(() => {
     setHydrated(true);
     setOnline(navigator.onLine);
-    const bump = () => setTick((n) => n + 1);
-    const unsub = qc.getQueryCache().subscribe(bump);
-    const interval = setInterval(bump, 1000);
+    // A 1s tick re-evaluates freshness over time. We deliberately do NOT subscribe
+    // to the query cache: that callback fires synchronously while other components
+    // render their useQuery, causing "setState while rendering" on this component.
+    // useIsFetching() already re-renders us on every fetch start/stop, which covers
+    // live/error transitions; the tick covers the passage into "stale".
+    const interval = setInterval(() => setTick((n) => n + 1), 1000);
     const goOnline = () => setOnline(true);
     const goOffline = () => setOnline(false);
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
     return () => {
-      unsub();
       clearInterval(interval);
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
     };
-  }, [qc]);
+  }, []);
 
   // Connectivity and the query cache are client-only; before hydration they differ
   // from the server render. Return a deterministic snapshot so the first client
