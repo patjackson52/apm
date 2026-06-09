@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from 'react';
+import Link from 'next/link';
 import type { StructuredDispatch } from '@apm/types';
 import type { StepOverlay } from '@/lib/workflow/runOverlay';
 import { CopyButton } from '@/components/Copy/CopyButton';
@@ -93,7 +94,7 @@ export function StepPopover({
           {overlay.artifactId ? (
             <>
               <dt>Artifact</dt>
-              <dd><a href={`/artifacts/${encodeURIComponent(overlay.artifactId)}`}>{overlay.artifactId}</a></dd>
+              <dd><Link href={`/artifacts/${encodeURIComponent(overlay.artifactId)}`}>{overlay.artifactId}</Link></dd>
             </>
           ) : null}
           {dispatch ? (

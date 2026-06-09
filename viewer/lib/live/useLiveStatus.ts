@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { deriveLiveState, type LiveState } from './deriveLiveState';
+import { useHydrated } from '@/lib/hooks/useHydrated';
 
 export interface LiveStatus {
   state: LiveState;
@@ -15,14 +16,13 @@ export function useLiveStatus(thresholdMs?: number): LiveStatus {
   const qc = useQueryClient();
   const isFetching = useIsFetching() > 0;
   const [, setTick] = useState(0);
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useHydrated();
   // SSR-stable default; the real navigator value is applied on mount. Initializing
   // from navigator.onLine here would diverge from the server render.
   const [online, setOnline] = useState(true);
   const refresh = useCallback(() => { void qc.invalidateQueries(); }, [qc]);
 
   useEffect(() => {
-    setHydrated(true);
     setOnline(navigator.onLine);
     // A 1s tick re-evaluates freshness over time. We deliberately do NOT subscribe
     // to the query cache: that callback fires synchronously while other components
