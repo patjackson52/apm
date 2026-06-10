@@ -22,6 +22,11 @@ vi.mock('@/lib/api/hooks', () => ({
   useRunSteps: (...a: unknown[]) => useRunSteps(...a),
   usePromptPanel: () => ({ data: { state: 'no-workflow', headline: null, timeline: [], provenance: null }, isLoading: false, isError: false }),
 }));
+const inertMutation = { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, isError: false, error: null, data: undefined };
+vi.mock('@/lib/api/mutations', () => ({
+  useRunNext: () => inertMutation,
+  useStepAction: () => inertMutation,
+}));
 
 import { RunGraph } from './RunGraph';
 

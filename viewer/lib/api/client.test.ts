@@ -41,7 +41,7 @@ describe('apiMutate', () => {
     const fetchMock = vi.fn(async () => env({ ok: true, data: { x: 7 }, error: null, meta }));
     vi.stubGlobal('fetch', fetchMock);
     expect(await apiMutate('/p', { y: 1 }, D, 'TOK')).toEqual({ x: 7 });
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(init.method).toBe('POST');
     expect((init.headers as Record<string, string>)['x-apm-csrf']).toBe('TOK');
     expect(init.body).toBe(JSON.stringify({ y: 1 }));

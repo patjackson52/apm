@@ -4,6 +4,8 @@ import { render, screen } from '@testing-library/react';
 const useBlockers = vi.fn();
 const useGates = vi.fn();
 vi.mock('@/lib/api/hooks', () => ({ useBlockers: () => useBlockers(), useGates: () => useGates() }));
+const inertMutation = { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, isError: false, error: null, data: undefined };
+vi.mock('@/lib/api/mutations', () => ({ useAnswerGate: () => inertMutation }));
 
 import { BlockersGates } from './BlockersGates';
 
@@ -16,7 +18,9 @@ describe('BlockersGates', () => {
     render(<BlockersGates />);
     expect(screen.getByText('dep WI-2 incomplete')).toBeTruthy();
     expect(screen.getByText('Approve the design?')).toBeTruthy();
-    expect(screen.getByText('[yes, no]')).toBeTruthy();
+    // Options now render as live answer buttons (the AnswerGate template).
+    expect(screen.getByRole('button', { name: 'yes' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'no' })).toBeTruthy();
   });
   it('shows empty states', () => {
     useBlockers.mockReturnValue({ data: [], isLoading: false, isError: false });

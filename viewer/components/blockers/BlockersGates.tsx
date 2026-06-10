@@ -2,6 +2,7 @@
 import { useBlockers, useGates } from '@/lib/api/hooks';
 import { Skeleton } from '@/components/Skeleton';
 import { IdLink } from '@/components/dashboard/IdLink';
+import { AnswerGate } from './AnswerGate';
 import s from './blockers.module.css';
 
 export function BlockersGates() {
@@ -32,8 +33,8 @@ export function BlockersGates() {
             <div key={g.id} className={s.row}>
               <IdLink id={g.work_item} />
               <span>{g.question ?? g.reason}</span>
-              {g.options.length > 0 ? <span className={s.muted}>[{g.options.join(', ')}]</span> : null}
               {g.current_step ? <span className={s.muted}>@ {g.current_step}</span> : null}
+              <AnswerGate blocker={g.id} options={g.options} />
             </div>
           ))}
       </section>

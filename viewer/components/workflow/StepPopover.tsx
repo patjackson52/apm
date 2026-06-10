@@ -5,6 +5,7 @@ import type { StructuredDispatch } from '@apm/types';
 import type { StepOverlay } from '@/lib/workflow/runOverlay';
 import { CopyButton } from '@/components/Copy/CopyButton';
 import { ComposedPrompt } from '@/components/prompt/ComposedPrompt';
+import { StepActions } from './StepActions';
 import s from './StepPopover.module.css';
 
 /**
@@ -18,11 +19,13 @@ export function StepPopover({
   step,
   overlay,
   dispatch,
+  runId,
   onClose,
 }: {
   step: { id: string; type: string };
   overlay?: StepOverlay;
   dispatch?: StructuredDispatch;
+  runId?: string;
   onClose: () => void;
 }) {
   const source = `${step.id} (${step.type})`;
@@ -93,6 +96,7 @@ export function StepPopover({
           ) : (
             <p className={s.meta}>No run data for this step.</p>
           )}
+          {runId && overlay ? <StepActions runId={runId} stepId={step.id} status={overlay.status} /> : null}
           <footer className={s.foot}>
             <CopyButton label="Copy step source" onCopy={() => navigator.clipboard.writeText(source)} disabled={typeof navigator === 'undefined' || !navigator.clipboard} />
           </footer>

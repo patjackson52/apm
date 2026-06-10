@@ -13,3 +13,9 @@
 .promptBody { margin: 6px 0; max-height: 220px; overflow: auto; padding: 8px; background: var(--bg-code, var(--bg-surface)); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-mono, monospace); font-size: 11px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; color: var(--fg-code, var(--fg-body)); }
 .foot { margin-top: 10px; }
 .openPrompt { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--accent); }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.actBtn { border: 1px solid var(--border); background: var(--bg-surface); color: var(--fg-body); border-radius: var(--radius-sm); padding: 3px 10px; font-size: 12px; cursor: pointer; }
+.actBtn:disabled { opacity: 0.6; cursor: default; }
+.actDanger { border-color: var(--status-blocked-fg, var(--accent)); color: var(--status-blocked-fg, var(--accent)); }
+.actErr { color: var(--status-blocked-fg, var(--accent)); font-size: 12px; flex-basis: 100%; }
+.reason { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 6px; font-size: 13px; background: var(--bg-surface); color: var(--fg-body); }
