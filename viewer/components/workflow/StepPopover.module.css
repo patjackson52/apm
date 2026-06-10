@@ -1,4 +1,7 @@
-.popover { position: absolute; top: 12px; right: 12px; z-index: 5; width: 280px; max-width: 90%; padding: 12px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 6px 24px rgba(0,0,0,0.18); }
+/* Radix portals Content to <body>; pin it to the top-right of the viewport. */
+.overlay { position: fixed; inset: 0; z-index: 49; background: transparent; }
+.popover { position: fixed; top: 64px; right: 16px; z-index: 50; width: 280px; max-width: 90vw; padding: 12px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 6px 24px rgba(0,0,0,0.18); }
+.popover:focus-visible { outline: none; }
 .head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .meta { color: var(--fg-muted); font-size: 12px; }
 .close { margin-left: auto; border: none; background: none; cursor: pointer; font-size: 18px; line-height: 1; color: var(--fg-muted); }
