@@ -75,6 +75,14 @@ describe('apm serve ↔ @apm/types contract', () => {
   it('/api/prompts/:name/versions/:v', () => check('/api/prompts/brainstorm_feature_v1/versions/1', PromptVersionViewSchema));
   it('/api/prompts/:name/usage (page)', () => check('/api/prompts/brainstorm_feature_v1/usage', pageSchema(WhereUsedRowSchema)));
   it('/api/work/:id/prompt-panel (structured panel)', () => check(`/api/work/${wiId}/prompt-panel`, PromptPanelViewSchema));
+  it('POST /api/work/:id/next dispatches (CSRF-guarded write)', async () => {
+    const tok = (await (await fetch(base + '/api/csrf')).json()).data.token as string;
+    const res = await fetch(`${base}/api/work/${wiId}/next`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-apm-csrf': tok }, body: JSON.stringify({ agent: 'claude' }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+  });
   it('/api/blockers (enriched array)', () => check('/api/blockers', z.array(EnrichedBlockerViewSchema)));
   it('/api/gates (enriched array)', () => check('/api/gates', z.array(EnrichedBlockerViewSchema)));
   it('/api/leases ({items}, no page wrapper)', () => check('/api/leases', z.object({ items: z.array(LeaseViewSchema) }).strict()));

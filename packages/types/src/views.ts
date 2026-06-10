@@ -257,3 +257,6 @@ export const StatusViewSchema = z.object({
   awaiting_human: z.array(AwaitsHumanSchema),
   active_runs: z.array(RunViewSchema),
 }).strict();
+
+export const CsrfTokenSchema = z.object({ token: z.string() }).strict();
+export type CsrfToken = z.infer<typeof CsrfTokenSchema>;

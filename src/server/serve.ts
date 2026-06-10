@@ -22,6 +22,7 @@ import * as decision from '../usecases/decision.js';
 import * as adr from '../usecases/adr.js';
 import * as blocker from '../usecases/blocker.js';
 import * as gate from '../usecases/gate.js';
+import * as nextRun from '../usecases/next.js';
 import * as events from '../usecases/events.js';
 import * as session from '../usecases/session.js';
 import * as search from '../usecases/search.js';
@@ -70,6 +71,12 @@ export const ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/work/:id/images', run: ({ ctx, params, query }) => image.list(ctx, { workItem: params.id, limit: num(query, 'limit'), offset: num(query, 'offset') }) },
   { method: 'GET', pattern: '/api/images/:id', run: ({ ctx, params }) => image.show(ctx, params.id) },
   { method: 'GET', pattern: '/api/images/:id/versions', run: ({ ctx, params }) => ({ items: image.versions(ctx, params.id) }) },
+  // --- Writes (WI-42; guarded by the CSRF/Origin check above). Wire to existing usecases. ---
+  { method: 'POST', pattern: '/api/gates/:blocker/answer', run: ({ ctx, params, body }) => gate.answer(ctx, params.blocker, body as gate.AnswerGateArgs) },
+  { method: 'POST', pattern: '/api/work/:id/next', run: ({ ctx, body }) => nextRun.next(ctx, { capabilities: [], match: 'any', ...(body as Partial<nextRun.NextArgs>), acquire: true } as nextRun.NextArgs) },
+  { method: 'POST', pattern: '/api/runs/:run/steps/:step/complete', run: ({ ctx, params, body }) => step.complete(ctx, { run: params.run, step: params.step, ...(body as object) } as step.CompleteArgs) },
+  { method: 'POST', pattern: '/api/runs/:run/steps/:step/fail', run: ({ ctx, params, body }) => step.fail(ctx, { run: params.run, step: params.step, ...(body as object) } as step.FailArgs) },
+  { method: 'POST', pattern: '/api/runs/:run/steps/:step/retry', run: ({ ctx, params, body }) => step.retry(ctx, { run: params.run, step: params.step, ...(body as object) } as step.RetryArgs) },
 ];
 
 /** Security response headers applied to every response (JSON + files). */
