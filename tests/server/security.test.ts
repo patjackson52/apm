@@ -46,8 +46,11 @@ describe('serve security hardening', () => {
     expect(r.headers.get('access-control-allow-origin')).toBeNull();
   });
 
-  it('route table is read-only (all GET)', () => {
-    expect(ROUTES.every((r) => r.method === 'GET')).toBe(true);
+  it('route table is GET reads + CSRF-guarded POST writes only (no other verbs)', () => {
+    // WI-42 added writes: every route is GET or POST; POSTs are guarded by the
+    // CSRF/Origin check (see serve-security.test.ts). No PUT/DELETE/PATCH.
+    expect(ROUTES.every((r) => r.method === 'GET' || r.method === 'POST')).toBe(true);
+    expect(ROUTES.some((r) => r.method === 'POST')).toBe(true); // V1 write routes exist
     expect(Object.keys(SECURITY_HEADERS).length).toBe(3);
   });
 });
