@@ -4,3 +4,8 @@
 .type { font-weight: 600; }
 .muted { color: var(--fg-muted); }
 .empty { color: var(--fg-muted); font-size: 13px; }
+.answer { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.answerBtn { border: 1px solid var(--accent); background: var(--accent); color: var(--fg-on-accent); border-radius: var(--radius-sm); padding: 2px 10px; font-size: 12px; cursor: pointer; }
+.answerBtn:disabled { opacity: 0.6; cursor: default; }
+.note { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px 6px; font-size: 12px; background: var(--bg-surface); color: var(--fg-body); max-width: 160px; }
+.answerErr { color: var(--status-blocked-fg, var(--accent)); font-size: 12px; }

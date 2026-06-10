@@ -54,7 +54,7 @@ describe('GET /api/leases (enriched)', () => {
     const { headers } = await get('/api/leases');
     expect(headers.get('content-security-policy')).toContain("default-src 'none'");
     const r = await fetch(base + '/api/leases', { method: 'POST' });
-    expect(r.status).toBe(405);
+    expect(r.status).toBe(403); // write guard rejects non-GET without a CSRF token
   });
 });
 

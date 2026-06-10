@@ -31,4 +31,5 @@ export const qk = {
   prompt: (name: string) => ['prompts', name] as const,
   promptUsage: (name: string, f: object = {}) => ['prompts', name, 'usage', f] as const,
   promptPanel: (id: string) => ['work', id, 'prompt-panel'] as const,
+  csrf: () => ['csrf'] as const,
 };

@@ -8,6 +8,9 @@ import { WorkflowGraph } from './WorkflowGraph';
 import { RunBanner } from './RunBanner';
 import { RunLegend } from './RunLegend';
 import { StepPopover } from './StepPopover';
+import { useRunNext } from '@/lib/api/mutations';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import s from './RunGraph.module.css';
 
 // Prefer an explicit runId; else the latest run by started_at desc (never array order).
 function pickRun(runs: RunView[] | undefined, runId?: string): RunView | undefined {
@@ -32,6 +35,8 @@ export function RunGraph({
   const stepsQ = useRunSteps(run?.id ?? '');
   const panelQ = usePromptPanel(workItemId);
   const [selected, setSelected] = useState<string | null>(null);
+  const [confirmNext, setConfirmNext] = useState(false);
+  const runNext = useRunNext(workItemId);
 
   if (wf.isLoading || runsQ.isLoading) return <Skeleton count={6} h={40} />;
   if (wf.isError || !wf.data) return <p>Failed to load workflow.</p>;
@@ -41,8 +46,22 @@ export function RunGraph({
 
   return (
     <section>
-      <h1>{wf.data.name}</h1>
+      <div className={s.header}>
+        <h1>{wf.data.name}</h1>
+        <button type="button" className={s.nextBtn} onClick={() => setConfirmNext(true)}>Run next</button>
+      </div>
       {run ? <RunBanner status={run.status} /> : null}
+      <ConfirmDialog
+        open={confirmNext}
+        title="Dispatch the next action?"
+        confirmLabel="Run next"
+        pending={runNext.isPending}
+        error={runNext.isError ? runNext.error.message : null}
+        onOpenChange={(o) => { if (!o) setConfirmNext(false); }}
+        onConfirm={() => runNext.mutate(undefined, { onSuccess: () => setConfirmNext(false) })}
+      >
+        Advances this work item by dispatching its next allowed step.
+      </ConfirmDialog>
       <WorkflowGraph
         steps={wf.data.steps}
         edges={wf.data.edges}
@@ -56,6 +75,7 @@ export function RunGraph({
           step={{ id: selectedStep.id, type: selectedStep.type }}
           overlay={overlay.get(selectedStep.id)}
           dispatch={panelQ.data?.timeline.find((d) => d.step_id === selectedStep.id)}
+          runId={run?.id}
           onClose={() => setSelected(null)}
         />
       ) : null}

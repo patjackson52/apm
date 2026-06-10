@@ -1,0 +1,16 @@
+.overlay { position: fixed; inset: 0; z-index: 59; background: var(--bg-overlay); }
+.content {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 60;
+  width: 360px; max-width: 92vw; padding: 16px;
+  background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+}
+.content:focus-visible { outline: none; }
+.title { margin: 0 0 6px; font-size: 15px; }
+.body { margin: 0 0 14px; font-size: 13px; color: var(--fg-body); }
+.err { margin: 0 0 12px; font-size: 12px; color: var(--status-blocked-fg, var(--accent)); }
+.row { display: flex; gap: 8px; justify-content: flex-end; }
+.btn { border: 1px solid var(--border); background: var(--bg-surface); color: var(--fg-body); border-radius: var(--radius-sm); padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.btn:disabled { opacity: 0.6; cursor: default; }
+.confirm { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); }
+.danger { background: var(--status-blocked-fg, var(--accent)); border-color: var(--status-blocked-fg, var(--accent)); color: var(--fg-on-accent); }
