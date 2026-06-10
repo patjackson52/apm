@@ -32,6 +32,8 @@ function req(opts: {
   method?: string;
   path?: string;
   host?: string;
+  headers?: Record<string, string>;
+  body?: string;
 }): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> {
   return new Promise((resolve, reject) => {
     const r = http.request(
@@ -40,7 +42,7 @@ function req(opts: {
         port,
         method: opts.method ?? 'GET',
         path: opts.path ?? '/api/status',
-        headers: opts.host ? { host: opts.host } : {},
+        headers: { ...(opts.host ? { host: opts.host } : {}), ...(opts.headers ?? {}) },
       },
       (res) => {
         let b = '';
@@ -49,6 +51,7 @@ function req(opts: {
       },
     );
     r.on('error', reject);
+    if (opts.body != null) r.write(opts.body);
     r.end();
   });
 }
@@ -63,11 +66,29 @@ describe('apm serve — daemon security hardening', () => {
     expect(r.headers['access-control-allow-origin']).toBeUndefined();
   });
 
-  it('non-GET verbs are rejected 405', async () => {
-    for (const method of ['POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']) {
+  it('OPTIONS is rejected 405 (no CORS preflight)', async () => {
+    expect((await req({ method: 'OPTIONS', path: '/api/status' })).status).toBe(405);
+  });
+
+  it('writes without a CSRF token are rejected 403 (write guard)', async () => {
+    for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {
       const r = await req({ method, path: '/api/status' });
-      expect(r.status, `${method} should be 405`).toBe(405);
+      expect(r.status, `${method} w/o CSRF should be 403`).toBe(403);
     }
+  });
+
+  it('GET /api/csrf returns a token', async () => {
+    const r = await req({ path: '/api/csrf' });
+    expect(r.status).toBe(200);
+    expect(typeof JSON.parse(r.body).data.token).toBe('string');
+    expect(JSON.parse(r.body).data.token.length).toBeGreaterThan(10);
+  });
+
+  it('a write with a bad CSRF token is 403; with a valid token it passes the guard (405 = no write route here)', async () => {
+    const token = JSON.parse((await req({ path: '/api/csrf' })).body).data.token as string;
+    expect((await req({ method: 'POST', path: '/api/status', headers: { 'x-apm-csrf': 'nope' }, body: '{}' })).status).toBe(403);
+    // Valid token → past the CSRF guard; /api/status has no POST route → 405 (not 403).
+    expect((await req({ method: 'POST', path: '/api/status', headers: { 'x-apm-csrf': token, 'content-type': 'application/json' }, body: '{}' })).status).toBe(405);
   });
 
   it('foreign Host header is rejected 403 (anti DNS-rebind)', async () => {

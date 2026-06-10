@@ -82,9 +82,9 @@ describe('apm serve', () => {
     expect(status).toBe(404); expect(body.ok).toBe(false); expect(body.error.code).toBe('E_NOT_FOUND');
   });
 
-  it('405 for POST on a known path', async () => {
+  it('403 for an unauthenticated POST on a known path (write guard)', async () => {
     const r = await fetch(base + '/api/status', { method: 'POST' });
-    expect(r.status).toBe(405);
+    expect(r.status).toBe(403); // CSRF guard rejects non-GET without X-APM-CSRF
   });
 
   it('403 for a non-localhost Host header (anti DNS-rebind)', async () => {

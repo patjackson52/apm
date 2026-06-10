@@ -85,7 +85,7 @@ describe('/api/files endpoint', () => {
     expect((await fetch(`${base}/api/files?path=.env`)).status).toBe(404);
     expect((await fetch(`${base}/api/files`)).status).toBe(404);
   });
-  it('405 for POST /api/files', async () => {
-    expect((await fetch(`${base}/api/files?path=pic.png`, { method: 'POST' })).status).toBe(405);
+  it('403 for POST /api/files (write guard: no CSRF token)', async () => {
+    expect((await fetch(`${base}/api/files?path=pic.png`, { method: 'POST' })).status).toBe(403);
   });
 });
