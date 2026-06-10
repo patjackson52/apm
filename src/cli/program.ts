@@ -642,11 +642,22 @@ export function buildProgram(deps: ProgramDeps = {}): Command {
     });
 
   promptCmd
+    .command('revise <name>')
+    .description('Add a new version of an existing prompt')
+    .requiredOption('--body-file <f>', 'path to prompt body file')
+    .action(function (this: Command, name: string, o: { bodyFile: string }) {
+      process.exitCode = runCommand(buildDeps(), 'prompt revise', (ctx) => ({
+        data: prompt.revise(ctx, { name, bodyFile: o.bodyFile }),
+      }));
+    });
+
+  promptCmd
     .command('show <name>')
     .description('Show a prompt definition by name')
-    .action(function (this: Command, name: string) {
+    .option('--version <n>', 'specific version', (v) => parseInt(v, 10))
+    .action(function (this: Command, name: string, o: { version?: number }) {
       process.exitCode = runCommand(buildDeps(), 'prompt show', (ctx) => ({
-        data: prompt.show(ctx, name),
+        data: prompt.show(ctx, name, o.version),
       }));
     });
 

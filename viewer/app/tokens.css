@@ -144,6 +144,13 @@
   --status-cancelled-bg:    #f2f3f5;
   --status-cancelled-border:#e0e3e8;
 
+  /* run/verdict hues used by prompt surfaces (resolve theme-aware via status-*-fg) */
+  --run-completed: var(--status-completed-fg);
+  --run-active:    var(--status-active-fg);
+  --run-failed:    var(--status-blocked-fg);
+  --run-pending:   #9aa1ad;
+  --run-skipped:   #b6bcc6;
+
   /* Gate / awaiting-human (amber) — distinct from blocked */
   --gate-fg:     #92400e;
   --gate-bg:     #fdf0db;
@@ -208,6 +215,9 @@
   --status-draft-fg:     #a3abb8;
   --status-draft-bg:     #20242d;
   --status-draft-border: #323844;
+
+  --run-pending:   #5c6470;
+  --run-skipped:   #454b56;
 
   --status-ready-fg:     #34c3e0;
   --status-ready-bg:     #0e2730;

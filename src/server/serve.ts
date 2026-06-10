@@ -25,6 +25,8 @@ import * as events from '../usecases/events.js';
 import * as session from '../usecases/session.js';
 import * as search from '../usecases/search.js';
 import * as image from '../usecases/image.js';
+import * as prompt from '../usecases/prompt.js';
+import * as workPrompt from '../usecases/workPrompt.js';
 
 const num = (q: URLSearchParams, k: string): number | undefined => {
   const v = q.get(k); return v == null ? undefined : parseInt(v, 10);
@@ -45,7 +47,15 @@ export const ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/work/:id/artifacts', run: ({ ctx, params, query }) => artifact.list(ctx, { workItem: params.id, limit: num(query, 'limit'), offset: num(query, 'offset') }) },
   { method: 'GET', pattern: '/api/work/:id/runs', run: ({ ctx, params }) => workflow.runsForWorkItem(ctx, params.id) },
   { method: 'GET', pattern: '/api/artifacts', run: ({ ctx, query }) => artifact.listAll(ctx, { limit: num(query, 'limit'), offset: num(query, 'offset'), type: str(query, 'type') }) },
+  { method: 'GET', pattern: '/api/work/:id/prompt-panel', run: ({ ctx, params }) => workPrompt.promptPanel(ctx, params.id) },
   { method: 'GET', pattern: '/api/artifacts/:id', run: ({ ctx, params }) => artifact.show(ctx, params.id) },
+  { method: 'GET', pattern: '/api/prompts', run: ({ ctx }) => prompt.listSummaries(ctx) },
+  { method: 'GET', pattern: '/api/prompts/:name', run: ({ ctx, params }) => prompt.detail(ctx, params.name) },
+  { method: 'GET', pattern: '/api/prompts/:name/usage', run: ({ ctx, params, query }) => prompt.usage(ctx, params.name, num(query, 'limit'), num(query, 'offset')) },
+  { method: 'GET', pattern: '/api/prompts/:name/versions/:v', run: ({ ctx, params }) => {
+    const p = prompt.show(ctx, params.name, parseInt(params.v, 10));
+    return { version: p.version, body: p.body, created_at: p.created_at };
+  } },
   { method: 'GET', pattern: '/api/workflows', run: ({ ctx }) => workflow.list(ctx) },
   { method: 'GET', pattern: '/api/workflows/:nameOrId', run: ({ ctx, params }) => workflow.show(ctx, params.nameOrId) },
   { method: 'GET', pattern: '/api/runs/:id/steps', run: ({ ctx, params }) => step.listForRun(ctx, params.id) },

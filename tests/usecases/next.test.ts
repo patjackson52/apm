@@ -30,7 +30,8 @@ describe('next usecase', () => {
     expect(r.data.step.id).toBe('brainstorm');
     expect(r.data.when_done.at(-1)).toContain(`apm step complete ${run.id} brainstorm`);
     expect(r.data.when_done.some((c: string) => c.includes('apm artifact create') && c.includes('--type spec'))).toBe(true);
-    expect(r.data.prompt_id).toBe('brainstorm_feature_v1');
+    expect(r.data.prompt_name).toBe('brainstorm_feature_v1');
+    expect(r.data.prompt_body).toBeTruthy(); // stored body resolved + inlined
     expect(next.nextExitCode(r)).toBe(0);
   });
 

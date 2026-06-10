@@ -9,6 +9,7 @@ import { AdrDoc } from './AdrDoc';
 import { VersionTimeline } from './VersionTimeline';
 import { Tabs, type TabDef } from './Tabs';
 import { ImagesGallery } from '@/components/image/ImagesGallery';
+import { PromptPanel } from '@/components/prompt/PromptPanel';
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Overview' },
@@ -36,6 +37,7 @@ export function WorkDetailTabs({ id }: { id: string }) {
   return (
     <>
       <h1>Work item {id}</h1>
+      <PromptPanel workItemId={id} />
       <Tabs tabs={TABS} active={active} onChange={(t) => setParam('tab', t)} />
       <div role="tabpanel" id={`panel-${active}`} aria-labelledby={`tab-${active}`}>
         {active === 'overview' && <p>Overview of {id}.</p>}

@@ -46,14 +46,15 @@ describe('render', () => {
 
   it('agent projects a next dispatched payload to the plaintext contract', () => {
     const data = { status: 'dispatched', work_item: 'WI-1', run: 'WR-1', step: { id: 'design', type: 'agent_prompt' },
-      prompt_id: 'design_solution_v1',
+      prompt_name: 'design_solution_v1', prompt_version: 2, prompt_body: 'Produce a design from the approved spec.',
       allowed_action: 'Produce the design artifact.', required_context: [{ id: 'ART-1', version: 2, type: 'spec', title: 'Spec', one_line: 'sync model' }],
       do_not: ['write implementation code'], when_done: ['apm step complete WR-1 design --artifact-type design --body-file <path> --agent <agent>'],
       next_actions: [{ cmd: 'apm step complete', args: {} }], lease: null };
     const s = render('agent', ok(data, buildMeta('next', clock, 'S-1')));
     expect(s).toMatch(/WORK_ITEM:\s*\n?WI-1/);
     expect(s).toMatch(/CURRENT_STEP:\s*\n?design/);
-    expect(s).toMatch(/PROMPT:\s*\n?design_solution_v1/);
+    expect(s).toMatch(/PROMPT \(design_solution_v1@2\):/);
+    expect(s).toContain('Produce a design from the approved spec.');
     expect(s).toMatch(/ALLOWED_ACTION:/);
     expect(s).toMatch(/ART-1@2/);
     expect(s).toMatch(/DO_NOT:/);

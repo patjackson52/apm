@@ -12,6 +12,21 @@ const overlay: StepOverlay = {
   completedAt: null,
 };
 
+describe('StepPopover structured dispatch', () => {
+  it('renders the layered ComposedPrompt + Open prompt link when a dispatch is provided', () => {
+    const dispatch = {
+      step_id: 'brainstorm', step_type: 'agent_prompt', status: 'completed',
+      prompt_name: 'brainstorm_feature_v1', prompt_version: 2, latest_version: 2,
+      body: 'Explore approaches', scaffold: { allowed_action: 'Produce a decision', required_context: [], do_not: ['write code'], when_done: ['apm step complete'] },
+      raw: 'WORK_ITEM:\nWI-1', at: '2026-06-01',
+    };
+    render(<StepPopover step={{ id: 'brainstorm', type: 'agent_prompt' }} overlay={overlay} dispatch={dispatch as never} onClose={() => {}} />);
+    expect(screen.getByText('Explore approaches')).toBeTruthy();
+    expect(screen.getByText('Dispatched prompt')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /open prompt/i }).getAttribute('href')).toBe('/prompts/brainstorm_feature_v1');
+  });
+});
+
 describe('StepPopover', () => {
   it('is an ARIA dialog showing plain-text fields (failure_reason not executed)', () => {
     const { container } = render(<StepPopover step={{ id: 'impl', type: 'agent_execution' }} overlay={overlay} onClose={() => {}} />);

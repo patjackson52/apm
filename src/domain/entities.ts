@@ -4,6 +4,7 @@ import type {
 } from './types.js';
 import type { StepDef } from './workflow.js';
 import { blobRelPath } from '../storage/blobstore.js';
+import { BUILTIN_PROMPT_NAMES } from '../workflows/prompts.js';
 
 export interface Page<T> { items: T[]; page: { total: number; limit: number; offset: number; has_more: boolean }; }
 
@@ -151,6 +152,7 @@ export interface StepRunView {
   output_artifact_id: string | null;
   failure_reason: string | null;
   dispatch_prompt: string | null;
+  prompt_definition_id: string | null;
 }
 
 export function toStepRunView(row: any): StepRunView {
@@ -168,6 +170,32 @@ export function toStepRunView(row: any): StepRunView {
     output_artifact_id: row.output_artifact_id ?? null,
     failure_reason: row.failure_reason ?? null,
     dispatch_prompt: row.dispatch_prompt ?? null,
+    prompt_definition_id: row.prompt_definition_id ?? null,
+  };
+}
+
+/** A stored prompt projected for the library (latest-per-name). `builtin` is derived
+ *  from the seeded set; `summary` from the first non-empty line of the latest body. */
+export interface PromptSummaryView {
+  name: string; latest_version: number; version_count: number;
+  builtin: boolean; summary: string; updated_at: string;
+  where_defs: number; where_runs: number;
+}
+export function toPromptSummaryView(row: any, extra: { versionCount: number; defs: number; runs: number }): PromptSummaryView {
+  const firstLine = String(row.body ?? '').split('\n').map((l: string) => l.trim()).find((l: string) => l !== '') ?? '';
+  return {
+    name: row.name, latest_version: row.version, version_count: extra.versionCount,
+    builtin: BUILTIN_PROMPT_NAMES.has(row.name), summary: firstLine.slice(0, 140),
+    updated_at: row.created_at, where_defs: extra.defs, where_runs: extra.runs,
+  };
+}
+
+export interface PromptVersionView { version: number; body: string; created_at: string; }
+export interface PromptDetailView extends PromptSummaryView { versions: PromptVersionView[]; }
+export function toPromptDetailView(latestRow: any, versions: any[], extra: { defs: number; runs: number }): PromptDetailView {
+  return {
+    ...toPromptSummaryView(latestRow, { versionCount: versions.length, defs: extra.defs, runs: extra.runs }),
+    versions: versions.map((r) => ({ version: r.version, body: r.body, created_at: r.created_at })),
   };
 }
 

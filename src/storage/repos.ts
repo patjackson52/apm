@@ -355,8 +355,51 @@ export function repos(tx: Tx) {
       byName(name: string): any | undefined {
         return tx.get('SELECT * FROM prompt_definitions WHERE name=? ORDER BY version DESC LIMIT 1', name);
       },
+      byNameVersion(name: string, version: number): any | undefined {
+        return tx.get('SELECT * FROM prompt_definitions WHERE name=? AND version=?', name, version);
+      },
       list(): any[] {
         return tx.all('SELECT * FROM prompt_definitions ORDER BY name, version');
+      },
+      listLatest(): any[] {
+        return tx.all(
+          `SELECT p.* FROM prompt_definitions p
+           WHERE p.version = (SELECT MAX(v.version) FROM prompt_definitions v WHERE v.name = p.name)
+           ORDER BY p.name`,
+        );
+      },
+      versionCount(name: string): number {
+        return tx.get<{ c: number }>('SELECT COUNT(*) c FROM prompt_definitions WHERE name=?', name)?.c ?? 0;
+      },
+      whereUsed(name: string): { defs: number; runs: number } {
+        const defRows = tx.all<{ definition_json: string }>("SELECT definition_json FROM workflow_definitions WHERE status='active'");
+        let defs = 0;
+        for (const d of defRows) {
+          try {
+            const steps = (JSON.parse(d.definition_json).steps ?? []) as Array<{ prompt_id?: string }>;
+            if (steps.some((s) => s.prompt_id === name)) defs += 1;
+          } catch { /* skip malformed */ }
+        }
+        const runs = tx.get<{ c: number }>(
+          'SELECT COUNT(*) c FROM workflow_step_runs sr JOIN prompt_definitions pd ON pd.id = sr.prompt_definition_id WHERE pd.name=?',
+          name,
+        )?.c ?? 0;
+        return { defs, runs };
+      },
+      whereUsedRuns(name: string, limit: number, offset: number): { rows: any[]; total: number } {
+        const total = tx.get<{ c: number }>(
+          'SELECT COUNT(*) c FROM workflow_step_runs sr JOIN prompt_definitions pd ON pd.id=sr.prompt_definition_id WHERE pd.name=?',
+          name,
+        )?.c ?? 0;
+        const rows = tx.all<any>(
+          `SELECT sr.workflow_run_id AS run, wr.work_item_id AS work_item, sr.status, sr.started_at AS at, pd.version
+           FROM workflow_step_runs sr
+           JOIN prompt_definitions pd ON pd.id = sr.prompt_definition_id
+           JOIN workflow_runs wr ON wr.id = sr.workflow_run_id
+           WHERE pd.name=? ORDER BY sr.started_at DESC LIMIT ? OFFSET ?`,
+          name, limit, offset,
+        );
+        return { rows, total };
       },
     },
   };

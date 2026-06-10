@@ -1,17 +1,23 @@
 "use client";
 import { useEffect, useRef } from 'react';
+import type { StructuredDispatch } from '@apm/types';
 import type { StepOverlay } from '@/lib/workflow/runOverlay';
 import { CopyButton } from '@/components/Copy/CopyButton';
+import { ComposedPrompt } from '@/components/prompt/ComposedPrompt';
 import s from './StepPopover.module.css';
 
-/** Run-step detail dialog. All fields plain-text (no markdown/HTML sink). */
+/** Run-step detail dialog. All fields plain-text (no markdown/HTML sink). When a
+ *  structured `dispatch` is available the layered ComposedPrompt is shown (same
+ *  component as the work-item panel, compact); otherwise the raw snapshot. */
 export function StepPopover({
   step,
   overlay,
+  dispatch,
   onClose,
 }: {
   step: { id: string; type: string };
   overlay?: StepOverlay;
+  dispatch?: StructuredDispatch;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -90,7 +96,17 @@ export function StepPopover({
               <dd><a href={`/artifacts/${encodeURIComponent(overlay.artifactId)}`}>{overlay.artifactId}</a></dd>
             </>
           ) : null}
-          {overlay.dispatchPrompt ? (
+          {dispatch ? (
+            <>
+              <dt>Dispatched prompt</dt>
+              <dd>
+                <ComposedPrompt dispatch={dispatch} tight clampBody />
+                {dispatch.prompt_name ? (
+                  <a className={s.openPrompt} href={`/prompts/${encodeURIComponent(dispatch.prompt_name)}`}>Open prompt</a>
+                ) : null}
+              </dd>
+            </>
+          ) : overlay.dispatchPrompt ? (
             <>
               <dt>Dispatch prompt</dt>
               <dd>
